@@ -1,5 +1,7 @@
 package com.tesis.appmovil.data
 
+import com.tesis.appmovil.models.Service
+
 class FakeRepository {
     fun getNearbyStyles(): List<Service> = listOf(
         Service(

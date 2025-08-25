@@ -12,7 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-
 rootProject.name = "AppMovilTesis"
 include(":app")
- 
