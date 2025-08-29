@@ -1,5 +1,8 @@
 package com.tesis.appmovil.ui.home
 
+import androidx.compose.ui.tooling.preview.Preview
+
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.tesis.appmovil.models.Service
 import com.tesis.appmovil.viewmodel.HomeViewModel
+
 
 @Composable
 fun HomeScreen(vm: HomeViewModel) {
@@ -231,4 +235,15 @@ private fun DealRowCard(s: Service) {
             }
         }
     }
+
+
 }
+
+//PARA VER EN SPLIT Y DESIGN
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun HomeScreenPreview() {
+    val vm = HomeViewModel() // usa FakeRepository por defecto
+    HomeScreen(vm)
+}
+
