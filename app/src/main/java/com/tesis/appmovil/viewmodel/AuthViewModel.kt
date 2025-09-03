@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 data class AuthUiState(
+    val name: String? = null,
     val email: String = "",
     val password: String = "",
     val isLoading: Boolean = false,
@@ -19,12 +20,15 @@ data class AuthUiState(
 )
 
 class AuthViewModel(
-    private val repo: FakeAuthRepository = FakeAuthRepository()
+    private val repo: FakeAuthRepository = FakeAuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
 
+    fun onUpdateName(name: String) {
+        _uiState.value = _uiState.value.copy(name = name)
+    }
     fun onEmailChange(value: String) {
         _uiState.value = _uiState.value.copy(email = value, error = null)
     }
@@ -49,4 +53,16 @@ class AuthViewModel(
         repo.setRole(role)
         _uiState.value = _uiState.value.copy(role = role)
     }
+    fun register(name: String, email: String, password: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            val result = repo.register(name, email, password)
+            _uiState.value = if (result.isSuccess) {
+                _uiState.value.copy(isLoading = false, user = result.getOrNull())
+            } else {
+                _uiState.value.copy(isLoading = false, error = result.exceptionOrNull()?.message)
+            }
+        }
+    }
+
 }

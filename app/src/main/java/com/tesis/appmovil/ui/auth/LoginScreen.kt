@@ -15,7 +15,8 @@ import com.tesis.appmovil.viewmodel.AuthViewModel
 @Composable
 fun LoginScreen(
     vm: AuthViewModel,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit,
+    onNavigateToRegister: () -> Unit
 ) {
     val state by vm.uiState.collectAsState()
 
@@ -33,6 +34,17 @@ fun LoginScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text("Iniciar sesión", style = MaterialTheme.typography.headlineSmall)
+
+            Spacer(Modifier.height(16.dp))
+
+            TextButton(onClick = { onNavigateToRegister() }) {
+                Text("¿No tienes una cuenta? Regístrate")
+            }
+
+            state.error?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(it, color = MaterialTheme.colorScheme.error)
+            }
 
             OutlinedTextField(
                 value = state.email,

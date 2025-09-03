@@ -21,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 import com.tesis.appmovil.models.UserRole
 import com.tesis.appmovil.ui.auth.ChooseRoleScreen
 import com.tesis.appmovil.ui.auth.LoginScreen
+import com.tesis.appmovil.ui.auth.RegisterScreen
 import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.viewmodel.AuthViewModel
 import com.tesis.appmovil.viewmodel.HomeViewModel
@@ -28,6 +29,8 @@ import com.tesis.appmovil.viewmodel.HomeViewModel
 sealed class Dest(val route: String, val label: String = "", val icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
     // flujo auth
     object Login : Dest("login")
+
+    object Register : Dest("register")
     object ChooseRole : Dest("chooseRole")
 
     // flujo principal del home (Scaffold con bottom bar)
@@ -42,15 +45,41 @@ fun AppRoot() {
 
     NavHost(navController = nav, startDestination = Dest.Login.route) {
         // 1. Login
+//        composable(Dest.Login.route) {
+//            val vm: AuthViewModel = viewModel()
+//            LoginScreen(vm) {
+//                nav.navigate(Dest.ChooseRole.route) {
+//                    popUpTo(Dest.Login.route) { inclusive = true }
+//                }
+//            }
+//        }
         composable(Dest.Login.route) {
             val vm: AuthViewModel = viewModel()
-            LoginScreen(vm) {
-                nav.navigate(Dest.ChooseRole.route) {
-                    popUpTo(Dest.Login.route) { inclusive = true }
+            LoginScreen(
+                vm = vm,
+                onSuccess = {
+                    nav.navigate(Dest.ChooseRole.route) {
+                        popUpTo(Dest.Login.route) { inclusive = true }
+                    }
+                },
+                onNavigateToRegister = {
+                    nav.navigate(Dest.Register.route)
                 }
-            }
+            )
         }
 
+        // 1.5 Register
+        composable(Dest.Register.route) {
+            val vm: AuthViewModel = viewModel()
+            RegisterScreen(
+                vm = vm,
+                onSuccess = {
+                    nav.navigate(Dest.ChooseRole.route) {
+                        popUpTo(Dest.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         // 2. ChooseRole
         composable(Dest.ChooseRole.route) {
             val vm: AuthViewModel = viewModel()
