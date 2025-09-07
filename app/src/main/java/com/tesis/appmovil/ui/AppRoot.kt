@@ -1,5 +1,6 @@
 package com.tesis.appmovil.ui
 
+import android.content.Intent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -8,8 +9,10 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -18,6 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.tesis.appmovil.MapsActivity
 import com.tesis.appmovil.models.UserRole
 import com.tesis.appmovil.ui.auth.ChooseRoleScreen
 import com.tesis.appmovil.ui.auth.LoginScreen
@@ -136,7 +140,14 @@ fun AppRoot() {
                         val vm: HomeViewModel = viewModel()
                         HomeScreen(vm)
                     }
-                    composable(Dest.Search.route) { Placeholder("Buscar (próximamente)") }
+                    composable(Dest.Search.route) {
+                        val context = LocalContext.current
+                        LaunchedEffect(Unit) {
+                            val intent = Intent(context, MapsActivity::class.java)
+                            context.startActivity(intent)
+                        }
+                    }
+
                     composable(Dest.Account.route) { Placeholder("Cuenta (próximamente)") }
                 }
             }
