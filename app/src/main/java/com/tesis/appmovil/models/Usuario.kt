@@ -12,8 +12,4 @@ data class Usuario(
     val foto_perfil: String,
     val fecha_creacion: Date,
     val estado_auditoria: Boolean
-
-
-
-
 )
