@@ -38,6 +38,10 @@
             </intent-filter>
 
         </activity>
+        <activity
+            android:name=".MapsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppMovilTesis" />
     </application>
 
 </manifest>
