@@ -1,4 +1,4 @@
-package com.tesis.appmovil.data
+package com.tesis.appmovil.repository
 
 import com.tesis.appmovil.models.Service
 

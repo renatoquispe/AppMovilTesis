@@ -7,5 +7,5 @@ data class Servicio(
     val descripcion: String?,
     val precio: Double,
     val duracion_minutos: Int,
-    val estado_auditoria: Boolean
+    val estado_auditoria: Boolean   // lo manda tu back
 )

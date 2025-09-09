@@ -1,8 +1,8 @@
 package com.tesis.appmovil.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.tesis.appmovil.data.FakeRepository
-import com.tesis.appmovil.data.FakeAuthRepository
+import com.tesis.appmovil.repository.FakeRepository
+import com.tesis.appmovil.repository.FakeAuthRepository
 import com.tesis.appmovil.models.Service
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

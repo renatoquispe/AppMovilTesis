@@ -9,11 +9,7 @@ data class Usuario(
     val correo: String,
     val contrasena: String,
     val fecha_nacimiento: Date,
-    val foto_perfil: String,
+    val foto_perfil: String?,
     val fecha_creacion: Date,
     val estado_auditoria: Boolean
-
-
-
-
 )
