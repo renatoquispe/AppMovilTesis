@@ -4,6 +4,6 @@
         <!-- Para emulador -->
         <domain includeSubdomains="true">10.0.2.2</domain>
         <!-- Para celular físico: reemplaza con la IP LAN de tu PC SE DEBE REEMPLAZAR POR SU IPV4-->
-        <domain includeSubdomains="true">192.168.18.9</domain>
+        <domain includeSubdomains="true">192.168.3.12</domain>
     </domain-config>
 </network-security-config>
