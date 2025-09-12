@@ -73,6 +73,17 @@ fun AppRoot() {
         }
 
         // 1.5 Register
+//        composable(Dest.Register.route) {
+//            val vm: AuthViewModel = viewModel()
+//            RegisterScreen(
+//                vm = vm,
+//                onSuccess = {
+//                    nav.navigate(Dest.ChooseRole.route) {
+//                        popUpTo(Dest.Login.route) { inclusive = true }
+//                    }
+//                }
+//            )
+//        }
         composable(Dest.Register.route) {
             val vm: AuthViewModel = viewModel()
             RegisterScreen(
@@ -81,9 +92,15 @@ fun AppRoot() {
                     nav.navigate(Dest.ChooseRole.route) {
                         popUpTo(Dest.Login.route) { inclusive = true }
                     }
+                },
+                onNavigateToLogin = {   // 👈 aquí agregas lo que hace al pulsar “Iniciar Sesión”
+                    nav.navigate(Dest.Login.route) {
+                        popUpTo(Dest.Register.route) { inclusive = true }
+                    }
                 }
             )
         }
+
         // 2. ChooseRole
         composable(Dest.ChooseRole.route) {
             val vm: AuthViewModel = viewModel()
