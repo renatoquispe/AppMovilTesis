@@ -26,18 +26,29 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.tesis.appmovil.models.Service
 import com.tesis.appmovil.viewmodel.HomeViewModel
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
+import com.tesis.appmovil.ChatActivity
 
 
 @Composable
 fun HomeScreen(vm: HomeViewModel) {
     val state by vm.uiState.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { /* TODO: abrir asistente IA */ }) {
-                Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente")
-            }
-        }
+            // Puedes usar FloatingActionButton o ExtendedFloatingActionButton
+            ExtendedFloatingActionButton(
+                text = { Text("Ayuda") }, // o "Chat"
+                icon = { Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente") },
+                onClick = {
+                    context.startActivity(Intent(context, ChatActivity::class.java))
+                },
+                shape = RoundedCornerShape(16.dp)
+            )
+        },
+        floatingActionButtonPosition = FabPosition.End // esquina inferior derecha
     ) { padding ->
         LazyColumn(
             modifier = Modifier
