@@ -44,7 +44,7 @@ val Typography = Typography(
     bodyLarge = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
+        fontSize = 18.sp,
         lineHeight = 22.sp // 140%
     ),
 

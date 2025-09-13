@@ -25,9 +25,9 @@ class HomeViewModel(
         HomeUiState(
             userName = authRepo.getCurrentUser()?.name ?: "Invitado", // 👈 obtenemos el nombre real
             location = "Lima, Perú",
-            nearby = repo.getNearbyStyles(),
-            featured = repo.getFeatured(),
-            deals = repo.getDeals()
+            nearby = repo.getOffers(),
+            featured = repo.getStyles(),
+            deals = repo.getServices()
         )
     )
     val uiState: StateFlow<HomeUiState> = _uiState
