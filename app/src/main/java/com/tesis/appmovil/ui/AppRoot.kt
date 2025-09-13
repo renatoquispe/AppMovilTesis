@@ -1,6 +1,7 @@
 package com.tesis.appmovil.ui
 
 import android.content.Intent
+import com.tesis.appmovil.ui.home.BusinessDetailScreen
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -141,7 +142,8 @@ fun AppRoot() {
                 ) {
                     composable(Dest.Home.route) {
                         val vm: HomeViewModel = viewModel()
-                        HomeScreen(vm)
+//                        HomeScreen(vm)
+                        HomeScreen(vm, innerNav)
                     }
                     composable(Dest.Search.route) {
                         val context = LocalContext.current
@@ -151,16 +153,7 @@ fun AppRoot() {
                         }
                     }
 
-//                    composable(Dest.Account.route) {
-//                        AccountScreen(
-//                            userName = "Juan Pérez", // aquí luego puedes pasar el nombre real desde AuthRepo
-//                            onProfileClick = { /* navegar a pantalla perfil */ },
-//                            onSettingsClick = { /* ajustes */ },
-//                            onFaqClick = { /* preguntas frecuentes */ },
-//                            onSupportClick = { /* soporte */ },
-//                            onLogoutClick = { /* cerrar sesión */ }
-//                        )
-//                    }
+
 //                    composable(Dest.Account.route) { Placeholder("Cuenta (próximamente)") }
                     composable(Dest.Account.route) {
                         AccountScreen(
@@ -178,6 +171,13 @@ fun AppRoot() {
                                 innerNav.navigate("support")
                             },
                             onLogoutClick = { }
+                        )
+                    }
+                    composable("businessDetail/{businessId}") { backStackEntry ->
+                        val businessId = backStackEntry.arguments?.getString("businessId")?.toIntOrNull() ?: 0
+                        BusinessDetailScreen(
+                            navController = innerNav,
+                            businessId = businessId
                         )
                     }
                     composable("editProfile") {
