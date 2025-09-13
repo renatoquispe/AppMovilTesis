@@ -154,9 +154,9 @@ private fun loadBusinessData(businessId: Int): Business {
             BusinessHour("Domingo", "Cerrado", "")
         ),
         images = listOf(
-            "https://ejemplo.com/imagen1.jpg",
-            "https://ejemplo.com/imagen2.jpg",
-            "https://ejemplo.com/imagen3.jpg"
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS7Zx_euOY_O5pRlFTeX0yYuUJ-ZDo8Zxbj6w&s",
+            "https://images.fresha.com/locations/location-profile-images/1236185/1699857/cdceaf57-ad04-4e9b-87fb-efdde910b168-MonarcaBarberShop-SanIsidro-PE-ProvinciaDeLima-LIMA-Sanisidro-Fresha.jpg?class=width-small",
+            "https://d375139ucebi94.cloudfront.net/region2/es/126246/biz_photo/5e0e38ef9af34dfeae554fb19e2348-barbershop-melvin-stilo-plaza--biz-photo-97d6148b5a454d78af4eb82d6da2ea-booksy.jpeg?size=640x427"
         )
     )
 }

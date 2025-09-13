@@ -1,5 +1,8 @@
 package com.tesis.appmovil.ui
 
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+
 import android.content.Intent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -35,6 +38,7 @@ import com.tesis.appmovil.ui.auth.RegisterScreen
 import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.viewmodel.AuthViewModel
 import com.tesis.appmovil.viewmodel.HomeViewModel
+import com.tesis.appmovil.ui.home.BusinessDetailScreen
 
 sealed class Dest(val route: String, val label: String = "", val icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
     // flujo auth
@@ -141,8 +145,19 @@ fun AppRoot() {
                 ) {
                     composable(Dest.Home.route) {
                         val vm: HomeViewModel = viewModel()
-                        HomeScreen(vm)
+                        HomeScreen(vm, innerNav)
                     }
+                    composable(
+                        route = "businessDetail/{businessId}",
+                        arguments = listOf(navArgument("businessId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val businessId = backStackEntry.arguments?.getInt("businessId") ?: 0
+                        BusinessDetailScreen(
+                            navController = innerNav,
+                            businessId = businessId
+                        )
+                    }
+
                     composable(Dest.Search.route) {
                         val context = LocalContext.current
                         LaunchedEffect(Unit) {
@@ -151,16 +166,7 @@ fun AppRoot() {
                         }
                     }
 
-//                    composable(Dest.Account.route) {
-//                        AccountScreen(
-//                            userName = "Juan Pérez", // aquí luego puedes pasar el nombre real desde AuthRepo
-//                            onProfileClick = { /* navegar a pantalla perfil */ },
-//                            onSettingsClick = { /* ajustes */ },
-//                            onFaqClick = { /* preguntas frecuentes */ },
-//                            onSupportClick = { /* soporte */ },
-//                            onLogoutClick = { /* cerrar sesión */ }
-//                        )
-//                    }
+
 //                    composable(Dest.Account.route) { Placeholder("Cuenta (próximamente)") }
                     composable(Dest.Account.route) {
                         AccountScreen(

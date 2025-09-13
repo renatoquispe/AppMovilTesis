@@ -44,44 +44,44 @@ class AuthViewModel : ViewModel() {
     }
 
     // --- LOGIN ---
-    fun login() {
-        // 🔥 Simulación de login exitoso (ignora backend)
-        _uiState.value = _uiState.value.copy(
-            isLoading = false,
-            user = "usuario_falso@ejemplo.com", // cualquier string
-            error = null
-        )
-    }
-
 //    fun login() {
-//        val state = _uiState.value
-//        if (state.email.isBlank() || state.password.isBlank()) {
-//            _uiState.value = state.copy(error = "Correo y contraseña requeridos")
-//            return
-//        }
-//        viewModelScope.launch {
-//            _uiState.value = state.copy(isLoading = true, error = null)
-//            try {
-//                val response = RetrofitClient.api
-//                    .login(LoginRequest(state.email, state.password))
-//                if (response.isSuccessful && response.body()?.success == true) {
-//                    val userData = response.body()!!.data!!.usuario
-//                    _uiState.value = _uiState.value.copy(
-//                        isLoading = false,
-//                        user = userData.correo
-//                    )
-//                } else {
-//                    _uiState.value = _uiState.value.copy(
-//                        isLoading = false,
-//                        error = response.body()?.message ?: "Error al iniciar sesión"
-//                    )
-//                }
-//            } catch (e: Exception) {
-//                _uiState.value = _uiState.value.copy(
-//                    isLoading = false,
-//                    error = e.message ?: "Error de red"
-//                )
-//            }
-//        }
+//        // 🔥 Simulación de login exitoso (ignora backend)
+//        _uiState.value = _uiState.value.copy(
+//            isLoading = false,
+//            user = "usuario_falso@ejemplo.com", // cualquier string
+//            error = null
+//        )
 //    }
+
+    fun login() {
+        val state = _uiState.value
+        if (state.email.isBlank() || state.password.isBlank()) {
+            _uiState.value = state.copy(error = "Correo y contraseña requeridos")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = state.copy(isLoading = true, error = null)
+            try {
+                val response = RetrofitClient.api
+                    .login(LoginRequest(state.email, state.password))
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val userData = response.body()!!.data!!.usuario
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        user = userData.correo
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = response.body()?.message ?: "Error al iniciar sesión"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Error de red"
+                )
+            }
+        }
+    }
 }
