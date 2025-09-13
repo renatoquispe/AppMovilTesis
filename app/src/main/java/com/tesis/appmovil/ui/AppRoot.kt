@@ -1,27 +1,27 @@
 package com.tesis.appmovil.ui
 
-import android.content.Intent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-//import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.tesis.appmovil.MapsActivity
 import com.tesis.appmovil.models.UserRole
 import com.tesis.appmovil.ui.account.AccountScreen
 import com.tesis.appmovil.ui.account.ChangePasswordScreen
@@ -33,17 +33,21 @@ import com.tesis.appmovil.ui.auth.ChooseRoleScreen
 import com.tesis.appmovil.ui.auth.LoginScreen
 import com.tesis.appmovil.ui.auth.RegisterScreen
 import com.tesis.appmovil.ui.home.HomeScreen
+import com.tesis.appmovil.ui.search.BuscarFragmentHost   // <<--- IMPORTA EL HOST DEL FRAGMENT
 import com.tesis.appmovil.viewmodel.AuthViewModel
 import com.tesis.appmovil.viewmodel.HomeViewModel
 
-sealed class Dest(val route: String, val label: String = "", val icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
+sealed class Dest(
+    val route: String,
+    val label: String = "",
+    val icon: androidx.compose.ui.graphics.vector.ImageVector? = null
+) {
     // flujo auth
     object Login : Dest("login")
-
     object Register : Dest("register")
     object ChooseRole : Dest("chooseRole")
 
-    // flujo principal del home (Scaffold con bottom bar)
+    // flujo principal con bottom bar
     object Home : Dest("home", "Inicio", Icons.Outlined.Home)
     object Search : Dest("search", "Buscar", Icons.Outlined.Search)
     object Account : Dest("account", "Cuenta", Icons.Outlined.AccountCircle)
@@ -54,7 +58,8 @@ fun AppRoot() {
     val nav = rememberNavController()
 
     NavHost(navController = nav, startDestination = Dest.Login.route) {
-        // 1. Login
+
+        // 1) Login
         composable(Dest.Login.route) {
             val vm: AuthViewModel = viewModel()
             LoginScreen(
@@ -64,12 +69,11 @@ fun AppRoot() {
                         popUpTo(Dest.Login.route) { inclusive = true }
                     }
                 },
-                onNavigateToRegister = {
-                    nav.navigate(Dest.Register.route)
-                }
+                onNavigateToRegister = { nav.navigate(Dest.Register.route) }
             )
         }
 
+        // 2) Registro
         composable(Dest.Register.route) {
             val vm: AuthViewModel = viewModel()
             RegisterScreen(
@@ -79,7 +83,7 @@ fun AppRoot() {
                         popUpTo(Dest.Login.route) { inclusive = true }
                     }
                 },
-                onNavigateToLogin = {   // 👈 aquí agregas lo que hace al pulsar “Iniciar Sesión”
+                onNavigateToLogin = {
                     nav.navigate(Dest.Login.route) {
                         popUpTo(Dest.Register.route) { inclusive = true }
                     }
@@ -87,7 +91,7 @@ fun AppRoot() {
             )
         }
 
-        // 2. ChooseRole
+        // 3) Elegir rol
         composable(Dest.ChooseRole.route) {
             val vm: AuthViewModel = viewModel()
             ChooseRoleScreen(
@@ -106,9 +110,8 @@ fun AppRoot() {
             )
         }
 
-        // 3. Main con bottom bar
+        // 4) Main con bottom bar
         composable("main") {
-            // 👇 usa un NavController NUEVO para el bottom bar
             val innerNav = rememberNavController()
             val items = listOf(Dest.Home, Dest.Search, Dest.Account)
             val backStack by innerNav.currentBackStackEntryAsState()
@@ -143,67 +146,34 @@ fun AppRoot() {
                         val vm: HomeViewModel = viewModel()
                         HomeScreen(vm)
                     }
+
+                    // *** AQUÍ VA TU MAPA INTEGRADO EN COMPOSE ***
                     composable(Dest.Search.route) {
-                        val context = LocalContext.current
-                        LaunchedEffect(Unit) {
-                            val intent = Intent(context, MapsActivity::class.java)
-                            context.startActivity(intent)
-                        }
+                        BuscarFragmentHost()
                     }
 
-//                    composable(Dest.Account.route) {
-//                        AccountScreen(
-//                            userName = "Juan Pérez", // aquí luego puedes pasar el nombre real desde AuthRepo
-//                            onProfileClick = { /* navegar a pantalla perfil */ },
-//                            onSettingsClick = { /* ajustes */ },
-//                            onFaqClick = { /* preguntas frecuentes */ },
-//                            onSupportClick = { /* soporte */ },
-//                            onLogoutClick = { /* cerrar sesión */ }
-//                        )
-//                    }
-//                    composable(Dest.Account.route) { Placeholder("Cuenta (próximamente)") }
                     composable(Dest.Account.route) {
                         AccountScreen(
                             userName = "Juan Pérez",
-                            onProfileClick = {
-                                innerNav.navigate("editProfile")   // 👈 aquí navegamos a la nueva pantalla
-                            },
-                            onSettingsClick = {
-                                innerNav.navigate("settings")  // 👈 Navegar a ajustes
-                            },
-                            onFaqClick = {
-                                innerNav.navigate("faq")
-                            },
-                            onSupportClick = {
-                                innerNav.navigate("support")
-                            },
-                            onLogoutClick = { }
+                            onProfileClick = { innerNav.navigate("editProfile") },
+                            onSettingsClick = { innerNav.navigate("settings") },
+                            onFaqClick = { innerNav.navigate("faq") },
+                            onSupportClick = { innerNav.navigate("support") },
+                            onLogoutClick = { /* TODO: logout */ }
                         )
                     }
-                    composable("editProfile") {
-                        EditProfileScreen(nav = innerNav)
-                    }
-                    composable("settings") {
-                        SettingsScreen(navController = innerNav)
-                    }
-                    composable("changePassword") {
-                        ChangePasswordScreen(navController = innerNav)
-                    }
-                    composable("faq") {
-                        FAQScreen(navController = innerNav)
-                    }
-                    composable("support") {
-                        SupportScreen(navController = innerNav)
-                    }
 
-
-
+                    // subrutas de Cuenta
+                    composable("editProfile") { EditProfileScreen(nav = innerNav) }
+                    composable("settings")    { SettingsScreen(navController = innerNav) }
+                    composable("changePassword") { ChangePasswordScreen(navController = innerNav) }
+                    composable("faq") { FAQScreen(navController = innerNav) }
+                    composable("support") { SupportScreen(navController = innerNav) }
                 }
             }
         }
     }
 }
-
 
 @Composable
 private fun Placeholder(text: String) {

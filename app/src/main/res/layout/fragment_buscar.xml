@@ -3,9 +3,10 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:theme="@style/ThemeOverlay.Material3">
 
-    <!-- El MAPA va al fondo -->
+    <!-- Mapa al fondo -->
     <FrameLayout
         android:id="@+id/map_container"
         android:layout_width="match_parent"
@@ -19,51 +20,33 @@
         android:padding="16dp"
         android:fitsSystemWindows="true">
 
-        <!-- Barra de búsqueda -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/searchCard"
+        <!-- Filtros principales -->
+        <com.google.android.material.chip.ChipGroup
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="4dp">
+            android:layout_height="wrap_content"
+            app:singleSelection="false"
+            app:chipSpacingHorizontal="8dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center_vertical"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp">
+            <com.google.android.material.chip.Chip
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:text="Peluquería"/>
 
-                <ImageButton
-                    android:id="@+id/btnMenu"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:contentDescription="@string/app_name"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@android:drawable/ic_menu_sort_by_size" />
+            <com.google.android.material.chip.Chip
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:text="Uñas"/>
 
-                <EditText
-                    android:id="@+id/inputSearch"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:hint="Busque el mejor servicio aquí"
-                    android:background="@android:color/transparent"
-                    android:paddingStart="12dp"
-                    android:imeOptions="actionSearch"
-                    android:singleLine="true"/>
+            <com.google.android.material.chip.Chip
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:text="Spa"/>
+        </com.google.android.material.chip.ChipGroup>
 
-                <ImageButton
-                    android:id="@+id/btnSearch"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:contentDescription="Buscar"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@android:drawable/ic_menu_search" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Chips / filtros -->
+        <!-- Chips adicionales desplazables -->
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -71,28 +54,33 @@
             android:overScrollMode="never">
 
             <com.google.android.material.chip.ChipGroup
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:singleSelection="false"
                 app:chipSpacingHorizontal="8dp">
 
                 <com.google.android.material.chip.Chip
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     style="@style/Widget.Material3.Chip.Suggestion"
-                    android:text="Peluquería"/>
+                    android:text="Cerca de mí"/>
 
                 <com.google.android.material.chip.Chip
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     style="@style/Widget.Material3.Chip.Suggestion"
-                    android:text="Uñas"/>
+                    android:text="Baratos"/>
 
                 <com.google.android.material.chip.Chip
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     style="@style/Widget.Material3.Chip.Suggestion"
-                    android:text="Spa"/>
+                    android:text="Abierto ahora"/>
             </com.google.android.material.chip.ChipGroup>
-
         </HorizontalScrollView>
     </LinearLayout>
 
-    <!-- Botones flotantes (recentrar y “IA”) -->
+    <!-- Botones flotantes -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
