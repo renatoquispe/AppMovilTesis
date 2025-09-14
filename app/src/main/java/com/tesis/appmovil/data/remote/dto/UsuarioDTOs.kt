@@ -1,5 +1,8 @@
 package com.tesis.appmovil.data.remote.dto
 
+
+
+
 data class UsuarioCreate(
     val nombre: String,
     val apellidoPaterno: String,

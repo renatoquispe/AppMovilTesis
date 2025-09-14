@@ -1,20 +1,27 @@
 package com.tesis.appmovil.ui.auth
 
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.foundation.shape.RoundedCornerShape
-import com.tesis.appmovil.R
+import android.app.Activity
+import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.tesis.appmovil.R
 import com.tesis.appmovil.viewmodel.AuthViewModel
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun LoginScreen(
@@ -23,8 +30,43 @@ fun LoginScreen(
     onNavigateToRegister: () -> Unit
 ) {
     val state by vm.uiState.collectAsState()
+    val context = LocalContext.current
+    val activity = context as Activity
 
-    // Si ya hay user -> éxito
+    // 1) Configurar GoogleSignInClient (idToken + email)
+    val gso = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(context.getString(R.string.google_web_client_id))
+            .requestEmail()
+            .build()
+    }
+    val googleClient: GoogleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
+
+    // 2) Launcher para recibir el resultado
+    val googleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
+            val idToken = account.idToken
+            if (!idToken.isNullOrBlank()) {
+                vm.loginWithGoogle(idToken)
+            } else {
+                Toast.makeText(context, "No se obtuvo idToken de Google", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: com.google.android.gms.common.api.ApiException) {
+            // Este es el error que está cerrando el diálogo
+            val code = e.statusCode
+            android.util.Log.e("GoogleSignIn", "Error GoogleSignIn, code=$code", e)
+            Toast.makeText(context, "Google Sign-In falló (code=$code)", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            android.util.Log.e("GoogleSignIn", "Error inesperado", e)
+            Toast.makeText(context, "Error inesperado en Sign-In", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // Navegación por éxito
     LaunchedEffect(state.user) {
         if (state.user != null) onSuccess()
     }
@@ -49,24 +91,17 @@ fun LoginScreen(
 
         Spacer(Modifier.height(2.dp))
 
-
+        // Navegar a registro
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "¿No tienes una cuenta? ",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Text("¿No tienes una cuenta? ", style = MaterialTheme.typography.bodyMedium)
             TextButton(
                 onClick = { onNavigateToRegister() },
-                contentPadding = PaddingValues(0.dp) // quita espacios extra
+                contentPadding = PaddingValues(0.dp)
             ) {
-                Text(
-                    "Regístrate",
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text("Regístrate", color = MaterialTheme.colorScheme.primary)
             }
         }
 
@@ -88,7 +123,9 @@ fun LoginScreen(
                 focusedLabelColor = MaterialTheme.colorScheme.primary
             )
         )
+
         Spacer(Modifier.height(14.dp))
+
         // Contraseña
         OutlinedTextField(
             value = state.password,
@@ -106,6 +143,7 @@ fun LoginScreen(
                 focusedLabelColor = MaterialTheme.colorScheme.primary
             )
         )
+
         state.error?.let { errorMsg ->
             Spacer(Modifier.height(8.dp))
             Text(
@@ -118,18 +156,16 @@ fun LoginScreen(
         // Olvidaste contraseña
         Box(Modifier.fillMaxWidth()) {
             TextButton(
-                onClick = { /* TODO: recuperación */ },
+                onClick = { /* TODO recuperación */ },
                 modifier = Modifier.align(Alignment.CenterEnd)
             ) {
-                Text("¿Olvidaste tu contraseña?",
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Text("¿Olvidaste tu contraseña?", color = MaterialTheme.colorScheme.primary)
             }
         }
 
         Spacer(Modifier.height(12.dp))
 
-        // Botón de inicio de sesión
+        // Botón de inicio de sesión normal
         Button(
             onClick = { vm.login() },
             enabled = !state.isLoading,
@@ -137,9 +173,7 @@ fun LoginScreen(
                 .fillMaxWidth()
                 .height(56.dp),
             shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             if (state.isLoading) {
                 CircularProgressIndicator(
@@ -154,11 +188,8 @@ fun LoginScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // Separador con línea
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        // Separador
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Divider(Modifier.weight(1f))
             Text("  o  ")
             Divider(Modifier.weight(1f))
@@ -168,18 +199,17 @@ fun LoginScreen(
 
         // Botones sociales
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            IconButton(
-                onClick = { /* TODO Facebook */ },
-                modifier = Modifier.size(48.dp)
-            ) {
+            // Facebook (queda por implementar)
+            IconButton(onClick = { /* TODO Facebook */ }, modifier = Modifier.size(48.dp)) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_facebook),
                     contentDescription = "Facebook",
-                    tint = Color.Unspecified // mantiene el color original del icono
+                    tint = Color.Unspecified
                 )
             }
+            // Google Sign-In
             IconButton(
-                onClick = { /* TODO Google */ },
+                onClick = { googleLauncher.launch(googleClient.signInIntent) },
                 modifier = Modifier.size(48.dp)
             ) {
                 Icon(
@@ -191,68 +221,3 @@ fun LoginScreen(
         }
     }
 }
-
-
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun LoginScreenPreview() {
-    // Creamos un estado simulado
-    var email by remember { mutableStateOf("usuario@ejemplo.com") }
-    var password by remember { mutableStateOf("123456") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
-
-    Box(Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-                .align(Alignment.Center),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text("Iniciar sesión", style = MaterialTheme.typography.headlineSmall)
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Correo") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Contraseña") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (error != null) {
-                Text(
-                    error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            Button(
-                onClick = { /* Acción simulada */ },
-                enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(20.dp)
-                    )
-                } else {
-                    Text("Entrar")
-                }
-            }
-        }
-    }
-}
-

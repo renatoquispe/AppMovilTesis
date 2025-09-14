@@ -16,11 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-//import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import com.tesis.appmovil.MapsActivity
 import com.tesis.appmovil.models.UserRole
 import com.tesis.appmovil.ui.auth.ChooseRoleScreen
@@ -31,16 +27,12 @@ import com.tesis.appmovil.viewmodel.AuthViewModel
 import com.tesis.appmovil.viewmodel.HomeViewModel
 
 sealed class Dest(val route: String, val label: String = "", val icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
-    // flujo auth
-    object Login : Dest("login")
-
-    object Register : Dest("register")
+    object Login      : Dest("login")
+    object Register   : Dest("register")
     object ChooseRole : Dest("chooseRole")
-
-    // flujo principal del home (Scaffold con bottom bar)
-    object Home : Dest("home", "Inicio", Icons.Outlined.Home)
-    object Search : Dest("search", "Buscar", Icons.Outlined.Search)
-    object Account : Dest("account", "Cuenta", Icons.Outlined.AccountCircle)
+    object Home       : Dest("home",   "Inicio", Icons.Outlined.Home)
+    object Search     : Dest("search", "Buscar", Icons.Outlined.Search)
+    object Account    : Dest("account","Cuenta", Icons.Outlined.AccountCircle)
 }
 
 @Composable
@@ -49,14 +41,6 @@ fun AppRoot() {
 
     NavHost(navController = nav, startDestination = Dest.Login.route) {
         // 1. Login
-//        composable(Dest.Login.route) {
-//            val vm: AuthViewModel = viewModel()
-//            LoginScreen(vm) {
-//                nav.navigate(Dest.ChooseRole.route) {
-//                    popUpTo(Dest.Login.route) { inclusive = true }
-//                }
-//            }
-//        }
         composable(Dest.Login.route) {
             val vm: AuthViewModel = viewModel()
             LoginScreen(
@@ -72,28 +56,17 @@ fun AppRoot() {
             )
         }
 
-        // 1.5 Register
-//        composable(Dest.Register.route) {
-//            val vm: AuthViewModel = viewModel()
-//            RegisterScreen(
-//                vm = vm,
-//                onSuccess = {
-//                    nav.navigate(Dest.ChooseRole.route) {
-//                        popUpTo(Dest.Login.route) { inclusive = true }
-//                    }
-//                }
-//            )
-//        }
+        // 2. Register
         composable(Dest.Register.route) {
             val vm: AuthViewModel = viewModel()
             RegisterScreen(
                 vm = vm,
                 onSuccess = {
                     nav.navigate(Dest.ChooseRole.route) {
-                        popUpTo(Dest.Login.route) { inclusive = true }
+                        popUpTo(Dest.Register.route) { inclusive = true }
                     }
                 },
-                onNavigateToLogin = {   // 👈 aquí agregas lo que hace al pulsar “Iniciar Sesión”
+                onNavigateToLogin = {
                     nav.navigate(Dest.Login.route) {
                         popUpTo(Dest.Register.route) { inclusive = true }
                     }
@@ -101,7 +74,7 @@ fun AppRoot() {
             )
         }
 
-        // 2. ChooseRole
+        // 3. ChooseRole
         composable(Dest.ChooseRole.route) {
             val vm: AuthViewModel = viewModel()
             ChooseRoleScreen(
@@ -120,9 +93,8 @@ fun AppRoot() {
             )
         }
 
-        // 3. Main con bottom bar
+        // 4. Main (bottom‐bar scaffold)
         composable("main") {
-            // 👇 usa un NavController NUEVO para el bottom bar
             val innerNav = rememberNavController()
             val items = listOf(Dest.Home, Dest.Search, Dest.Account)
             val backStack by innerNav.currentBackStackEntryAsState()
@@ -141,7 +113,7 @@ fun AppRoot() {
                                         restoreState = true
                                     }
                                 },
-                                icon = { d.icon?.let { Icon(it, contentDescription = d.label) } },
+                                icon  = { d.icon?.let { Icon(it, contentDescription = d.label) } },
                                 label = { Text(d.label) }
                             )
                         }
@@ -160,28 +132,23 @@ fun AppRoot() {
                     composable(Dest.Search.route) {
                         val context = LocalContext.current
                         LaunchedEffect(Unit) {
-                            val intent = Intent(context, MapsActivity::class.java)
-                            context.startActivity(intent)
+                            context.startActivity(Intent(context, MapsActivity::class.java))
                         }
                     }
-
-                    composable(Dest.Account.route) { Placeholder("Cuenta (próximamente)") }
+                    composable(Dest.Account.route) {
+                        Surface(Modifier.fillMaxSize()) {
+                            Text(
+                                "Cuenta (próximamente)",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(24.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-
-@Composable
-private fun Placeholder(text: String) {
-    Surface(Modifier.fillMaxSize()) {
-        Text(
-            text,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            textAlign = TextAlign.Center
-        )
-    }
-}

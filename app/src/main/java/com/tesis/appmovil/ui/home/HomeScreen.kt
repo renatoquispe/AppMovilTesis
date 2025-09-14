@@ -84,7 +84,7 @@ fun HomeScreen(vm: HomeViewModel) {
 @Composable
 private fun HeaderGreeting(name: String, location: String) {
     Column(Modifier.fillMaxWidth()) {
-        Text(text = "Hola, $name", style = MaterialTheme.typography.titleMedium)
+        //Text(text = "Hola, $name", style = MaterialTheme.typography.titleMedium)
         Text(
             text = "¿Qué harás hoy?",
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)

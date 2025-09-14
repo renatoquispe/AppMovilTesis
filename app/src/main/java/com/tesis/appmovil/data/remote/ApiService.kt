@@ -1,5 +1,6 @@
 package com.tesis.appmovil.data.remote
 import com.tesis.appmovil.data.remote.dto.*
+import com.tesis.appmovil.data.remote.request.GoogleLoginRequest
 import com.tesis.appmovil.data.remote.request.LoginRequest
 import com.tesis.appmovil.data.remote.request.LoginResponse
 import com.tesis.appmovil.models.*
@@ -17,6 +18,8 @@ interface ApiService {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): Response<LoginResponse>
 
+    @POST("auth/google")
+    suspend fun loginWithGoogle(@Body body: GoogleLoginRequest): Response<LoginResponse>
     // Si tienes registro o refresh en tu back, los declaras aquí:
     // @POST("auth/register") suspend fun register(@Body body: UsuarioCreate): Response<Usuario>
     // @POST("auth/refresh") suspend fun refresh(@Body body: TokenRefreshRequest): Response<TokenRefreshResponse>
@@ -249,6 +252,8 @@ interface ApiService {
 
     @DELETE("mensajes/{id}")
     suspend fun deleteMensaje(@Path("id") id: Int): Response<Unit>
+
+
 
 
 

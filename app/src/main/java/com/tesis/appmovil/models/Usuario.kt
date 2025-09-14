@@ -7,7 +7,7 @@ data class Usuario(
     val apellido_paterno: String,
     val apellido_materno: String,
     val correo: String,
-    val contrasena: String,
+    val contrasena: String? = null,
     val fecha_nacimiento: Date,
     val foto_perfil: String?,
     val fecha_creacion: Date,
