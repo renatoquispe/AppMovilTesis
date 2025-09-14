@@ -1,52 +1,47 @@
 package com.tesis.appmovil.ui.search
 
-import android.content.Context
-import android.content.ContextWrapper
 import android.view.View
-import android.widget.FrameLayout
+import android.view.ViewGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.commit
 
-/**
- * Host para mostrar BuscarFragment dentro de Compose.
- * Requiere que exista la clase BuscarFragment en el MISMO paquete:
- * package com.tesis.appmovil.ui.search
- */
 @Composable
 fun BuscarFragmentHost(modifier: Modifier = Modifier) {
-    val activity = LocalContext.current.findFragmentActivity() ?: return
-    val containerId = remember { View.generateViewId() }
-    val fragmentTag = "BuscarFragmentTag"
+    val activity = LocalContext.current as FragmentActivity
+    val fm = activity.supportFragmentManager
+    val containerId = remember { View.generateViewId() }   // <- id VÁLIDO en runtime
+    val tag = "buscar_fragment"
 
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
-            FrameLayout(ctx).apply {
+            FragmentContainerView(ctx).apply {
                 id = containerId
-                val fm = activity.supportFragmentManager
-                val existing = fm.findFragmentByTag(fragmentTag)
-                fm.commit {
-                    setReorderingAllowed(true)
-                    if (existing == null) {
-                        add(id, BuscarFragment(), fragmentTag)
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        },
+        update = { container ->
+            val existing = fm.findFragmentByTag(tag)
+            fm.commit {
+                setReorderingAllowed(true)
+                if (existing == null) {
+                    replace(container.id, BuscarFragment(), tag)
+                } else {
+                    // si ya existe, asegúrate de que esté asociado a ESTE contenedor
+                    if (existing.view?.id != container.id) {
+                        replace(container.id, existing, tag)
                     }
                 }
             }
         }
     )
-}
-
-/** Helper para obtener la Activity desde el Context de Compose */
-private fun Context.findFragmentActivity(): FragmentActivity? {
-    var ctx = this
-    while (ctx is ContextWrapper) {
-        if (ctx is FragmentActivity) return ctx
-        ctx = ctx.baseContext
-    }
-    return null
 }

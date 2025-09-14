@@ -1,46 +1,68 @@
 package com.tesis.appmovil.ui
 
-import android.content.Intent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.*
-import com.tesis.appmovil.MapsActivity
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.tesis.appmovil.models.UserRole
 import com.tesis.appmovil.ui.auth.ChooseRoleScreen
 import com.tesis.appmovil.ui.auth.LoginScreen
 import com.tesis.appmovil.ui.auth.RegisterScreen
 import com.tesis.appmovil.ui.home.HomeScreen
+import com.tesis.appmovil.ui.search.BuscarFragmentHost
 import com.tesis.appmovil.viewmodel.AuthViewModel
 import com.tesis.appmovil.viewmodel.HomeViewModel
 
-sealed class Dest(val route: String, val label: String = "", val icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
-    object Login      : Dest("login")
-    object Register   : Dest("register")
+// ----------------- Rutas -----------------
+sealed class Dest(
+    val route: String,
+    val label: String = "",
+    val icon: androidx.compose.ui.graphics.vector.ImageVector? = null
+) {
+    // flujo auth
+    object Login : Dest("login")
+    object Register : Dest("register")
     object ChooseRole : Dest("chooseRole")
-    object Home       : Dest("home",   "Inicio", Icons.Outlined.Home)
-    object Search     : Dest("search", "Buscar", Icons.Outlined.Search)
-    object Account    : Dest("account","Cuenta", Icons.Outlined.AccountCircle)
+
+    // flujo principal con bottom bar
+    object Home : Dest("home", "Inicio", Icons.Outlined.Home)
+    object Search : Dest("search", "Buscar", Icons.Outlined.Search)
+    object Account : Dest("account", "Cuenta", Icons.Outlined.AccountCircle)
 }
 
+/**
+ * Root del app: navega Login -> ChooseRole -> Main (tabs persistentes)
+ */
 @Composable
 fun AppRoot() {
     val nav = rememberNavController()
 
     NavHost(navController = nav, startDestination = Dest.Login.route) {
-        // 1. Login
+
+        // 1) Login
         composable(Dest.Login.route) {
             val vm: AuthViewModel = viewModel()
             LoginScreen(
@@ -50,20 +72,18 @@ fun AppRoot() {
                         popUpTo(Dest.Login.route) { inclusive = true }
                     }
                 },
-                onNavigateToRegister = {
-                    nav.navigate(Dest.Register.route)
-                }
+                onNavigateToRegister = { nav.navigate(Dest.Register.route) }
             )
         }
 
-        // 2. Register
+        // 2) Register
         composable(Dest.Register.route) {
             val vm: AuthViewModel = viewModel()
             RegisterScreen(
                 vm = vm,
                 onSuccess = {
                     nav.navigate(Dest.ChooseRole.route) {
-                        popUpTo(Dest.Register.route) { inclusive = true }
+                        popUpTo(Dest.Login.route) { inclusive = true }
                     }
                 },
                 onNavigateToLogin = {
@@ -74,78 +94,87 @@ fun AppRoot() {
             )
         }
 
-        // 3. ChooseRole
+        // 3) ChooseRole
         composable(Dest.ChooseRole.route) {
             val vm: AuthViewModel = viewModel()
             ChooseRoleScreen(
                 onClient = {
                     vm.chooseRole(UserRole.CLIENT)
-                    nav.navigate("main") {
-                        popUpTo(Dest.ChooseRole.route) { inclusive = true }
-                    }
+                    nav.navigate("main") { popUpTo(Dest.ChooseRole.route) { inclusive = true } }
                 },
                 onProfessional = {
                     vm.chooseRole(UserRole.PROFESSIONAL)
-                    nav.navigate("main") {
-                        popUpTo(Dest.ChooseRole.route) { inclusive = true }
-                    }
+                    nav.navigate("main") { popUpTo(Dest.ChooseRole.route) { inclusive = true } }
                 }
             )
         }
 
-        // 4. Main (bottom‐bar scaffold)
+        // 4) MAIN: pestañas persistentes (sin NavHost interno)
         composable("main") {
-            val innerNav = rememberNavController()
-            val items = listOf(Dest.Home, Dest.Search, Dest.Account)
-            val backStack by innerNav.currentBackStackEntryAsState()
-            val current = backStack?.destination?.route
+            MainWithBottomBar()
+        }
+    }
+}
 
-            Scaffold(
-                bottomBar = {
-                    NavigationBar {
-                        items.forEach { d ->
-                            NavigationBarItem(
-                                selected = current == d.route,
-                                onClick = {
-                                    innerNav.navigate(d.route) {
-                                        popUpTo(innerNav.graph.startDestinationId) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                icon  = { d.icon?.let { Icon(it, contentDescription = d.label) } },
-                                label = { Text(d.label) }
-                            )
-                        }
-                    }
+/**
+ * Bottom bar con 3 pestañas **persistentes**.
+ * Importante: NO usamos AnimatedVisibility aquí. En su lugar mantenemos
+ * todas las pestañas montadas y solo cambiamos visibilidad con alpha/zIndex.
+ * Así el mapa (BuscarFragmentHost) NO se destruye al cambiar de pestaña.
+ */
+@Composable
+fun MainWithBottomBar() {
+    var current by rememberSaveable { mutableStateOf(Dest.Home.route) }
+    val items = listOf(Dest.Home, Dest.Search, Dest.Account)
+
+    fun Modifier.visible(visible: Boolean) =
+        this.zIndex(if (visible) 1f else 0f)
+            .alpha(if (visible) 1f else 0f)
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                items.forEach { d ->
+                    NavigationBarItem(
+                        selected = current == d.route,
+                        onClick = { current = d.route },
+                        icon = { d.icon?.let { Icon(it, contentDescription = d.label) } },
+                        label = { Text(d.label) }
+                    )
                 }
-            ) { padding ->
-                NavHost(
-                    navController = innerNav,
-                    startDestination = Dest.Home.route,
-                    modifier = Modifier.padding(padding)
-                ) {
-                    composable(Dest.Home.route) {
-                        val vm: HomeViewModel = viewModel()
-                        HomeScreen(vm)
-                    }
-                    composable(Dest.Search.route) {
-                        val context = LocalContext.current
-                        LaunchedEffect(Unit) {
-                            context.startActivity(Intent(context, MapsActivity::class.java))
-                        }
-                    }
-                    composable(Dest.Account.route) {
-                        Surface(Modifier.fillMaxSize()) {
-                            Text(
-                                "Cuenta (próximamente)",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(24.dp),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
+            }
+        }
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
+
+            Box(
+                Modifier
+                    .fillMaxSize()           // <- antes matchParentSize()
+                    .visible(current == Dest.Home.route)
+            ) {
+                val vm: HomeViewModel = viewModel()
+                HomeScreen(vm)
+            }
+
+            Box(
+                Modifier
+                    .fillMaxSize()           // <- antes matchParentSize()
+                    .visible(current == Dest.Search.route)
+            ) {
+                BuscarFragmentHost()
+            }
+
+            Box(
+                Modifier
+                    .fillMaxSize()           // <- antes matchParentSize()
+                    .visible(current == Dest.Account.route)
+            ) {
+                Surface(Modifier.fillMaxSize()) {
+                    Text(
+                        "Cuenta (próximamente)",
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
