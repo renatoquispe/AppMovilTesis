@@ -32,7 +32,7 @@ import com.tesis.appmovil.ui.auth.ChooseRoleScreen
 import com.tesis.appmovil.ui.auth.LoginScreen
 import com.tesis.appmovil.ui.auth.RegisterScreen
 import com.tesis.appmovil.ui.home.HomeScreen
-import com.tesis.appmovil.ui.search.BuscarFragmentHost
+import com.tesis.appmovil.ui.search.BuscarScreen     // <- usa la pantalla con controles
 import com.tesis.appmovil.viewmodel.AuthViewModel
 import com.tesis.appmovil.viewmodel.HomeViewModel
 
@@ -118,9 +118,8 @@ fun AppRoot() {
 
 /**
  * Bottom bar con 3 pestañas **persistentes**.
- * Importante: NO usamos AnimatedVisibility aquí. En su lugar mantenemos
- * todas las pestañas montadas y solo cambiamos visibilidad con alpha/zIndex.
- * Así el mapa (BuscarFragmentHost) NO se destruye al cambiar de pestaña.
+ * Mantenemos todas montadas y solo cambiamos visibilidad con alpha/zIndex.
+ * Así el mapa NO se destruye al cambiar de pestaña.
  */
 @Composable
 fun MainWithBottomBar() {
@@ -147,26 +146,29 @@ fun MainWithBottomBar() {
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
 
+            // HOME
             Box(
                 Modifier
-                    .fillMaxSize()           // <- antes matchParentSize()
+                    .fillMaxSize()
                     .visible(current == Dest.Home.route)
             ) {
                 val vm: HomeViewModel = viewModel()
                 HomeScreen(vm)
             }
 
+            // SEARCH  -> ahora usa BuscarScreen()
             Box(
                 Modifier
-                    .fillMaxSize()           // <- antes matchParentSize()
+                    .fillMaxSize()
                     .visible(current == Dest.Search.route)
             ) {
-                BuscarFragmentHost()
+                BuscarScreen()
             }
 
+            // ACCOUNT (placeholder)
             Box(
                 Modifier
-                    .fillMaxSize()           // <- antes matchParentSize()
+                    .fillMaxSize()
                     .visible(current == Dest.Account.route)
             ) {
                 Surface(Modifier.fillMaxSize()) {
