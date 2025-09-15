@@ -1,6 +1,5 @@
 package com.tesis.appmovil.ui.search
 
-import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,24 +24,23 @@ import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.commit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.tesis.appmovil.R
 import com.tesis.appmovil.viewmodel.SearchViewModel
 import com.tesis.appmovil.viewmodel.ServiceItem
 
-/**
- * Host del Fragment con Google Maps. Se mantiene igual que ya tenías.
- */
+/** Host del Fragment con Google Maps — robusto para reentradas */
 @Composable
 fun BuscarFragmentHost(modifier: Modifier = Modifier) {
     val activity = LocalContext.current as FragmentActivity
     val fm = activity.supportFragmentManager
-    val containerId = remember { View.generateViewId() }   // id de vista válido en runtime
     val tag = "buscar_fragment"
+    val stableId = R.id.search_fragment_container
 
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
             FragmentContainerView(ctx).apply {
-                id = containerId
+                id = stableId
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -51,44 +49,63 @@ fun BuscarFragmentHost(modifier: Modifier = Modifier) {
         },
         update = { container ->
             val existing = fm.findFragmentByTag(tag)
-            fm.commit {
-                setReorderingAllowed(true)
-                if (existing == null) {
-                    replace(container.id, BuscarFragment(), tag)
-                } else {
-                    // Si ya existe, asegúrate de asociarlo a ESTE contenedor
-                    if (existing.view?.id != container.id) {
-                        replace(container.id, existing, tag)
-                    }
+
+            // comprobaciones de estado y logging para debug
+            if (existing == null) {
+                android.util.Log.d("BuscarFragmentHost", "No hay fragment → se añade uno nuevo")
+                fm.commit {
+                    setReorderingAllowed(true)
+                    add(container.id, BuscarFragment(), tag)
+                }
+                return@AndroidView
+            }
+
+            // ¿la view del fragment está realmente dentro del container actual?
+            val isViewAttachedToThisContainer = existing.view?.parent == container
+
+            if (isViewAttachedToThisContainer) {
+                android.util.Log.d("BuscarFragmentHost", "Fragment ya está listo y su view está en el container → no hacer nada")
+                return@AndroidView
+            } else {
+                // el fragment existía, pero su view NO está en el container actual:
+                // lo removemos y añadimos uno nuevo para asegurarnos de que se cree la vista correctamente
+                android.util.Log.d(
+                    "BuscarFragmentHost",
+                    "Fragment existe pero su view NO pertenece al container actual → remove + add nuevo fragment"
+                )
+
+                fm.commit {
+                    setReorderingAllowed(true)
+                    // remove el fragment viejo (desmonta su view) y añade uno fresco
+                    remove(existing)
+                    add(container.id, BuscarFragment(), tag)
                 }
             }
         }
     )
 }
 
-/**
- * Pantalla completa: Mapa al fondo + overlay con controles (buscador, cards).
- */
+
+/** Pantalla: mapa al fondo + overlay con controles */
 @Composable
-fun BuscarScreen(
-    vm: SearchViewModel = viewModel()
-) {
+fun BuscarScreen(vm: SearchViewModel = viewModel()) {
     Box(Modifier.fillMaxSize()) {
-        // 1) MAPA al fondo
+        // 1) Mapa al fondo
         BuscarFragmentHost(Modifier.fillMaxSize())
 
-        // 2) Overlay de controles
+        // 2) Overlay con buscador + lista
         ControlsOverlay(
             query = vm.state.query,
             onQueryChange = vm::onQueryChange,
             popular = vm.state.popular,
-            onClickService = { /* TODO: abrir detalle */ },
-            onClickIA = { /* TODO: acción IA */ }
+            onClickService = { /* TODO abrir detalle */ },
+            onClickIA = { /* TODO IA */ }
         )
     }
 }
 
-/** Controles que se dibujan sobre el mapa */
+/* ---------- resto de composables (los tuyos) ---------- */
+
 @Composable
 private fun ControlsOverlay(
     query: String,
@@ -103,7 +120,6 @@ private fun ControlsOverlay(
             .systemBarsPadding()
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        // Barra de búsqueda tipo píldora
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
@@ -151,7 +167,6 @@ private fun SectionCardTitle(title: String) {
     }
 }
 
-/** Tarjeta de servicio que replica el look de tu segunda imagen */
 @Composable
 private fun ServiceCard(
     item: ServiceItem,
@@ -206,11 +221,7 @@ private fun ServiceCard(
                         Text("Corte + Ritual de barba", style = MaterialTheme.typography.bodySmall)
                         Text(item.price2, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Ver más",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Text("Ver más", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                     }
 
                     FilledTonalButton(

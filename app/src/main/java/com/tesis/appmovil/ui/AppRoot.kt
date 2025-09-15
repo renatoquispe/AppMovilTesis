@@ -24,13 +24,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.tesis.appmovil.models.UserRole
 import com.tesis.appmovil.ui.auth.ChooseRoleScreen
 import com.tesis.appmovil.ui.auth.LoginScreen
 import com.tesis.appmovil.ui.auth.RegisterScreen
+import com.tesis.appmovil.ui.home.BusinessDetailScreen
 import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.ui.search.BuscarScreen     // <- usa la pantalla con controles
 import com.tesis.appmovil.viewmodel.AuthViewModel
@@ -123,12 +127,10 @@ fun AppRoot() {
  */
 @Composable
 fun MainWithBottomBar() {
-    var current by rememberSaveable { mutableStateOf(Dest.Home.route) }
+    val innerNav = rememberNavController()
     val items = listOf(Dest.Home, Dest.Search, Dest.Account)
-
-    fun Modifier.visible(visible: Boolean) =
-        this.zIndex(if (visible) 1f else 0f)
-            .alpha(if (visible) 1f else 0f)
+    val backStack by innerNav.currentBackStackEntryAsState()
+    val current = backStack?.destination?.route
 
     Scaffold(
         bottomBar = {
@@ -136,7 +138,13 @@ fun MainWithBottomBar() {
                 items.forEach { d ->
                     NavigationBarItem(
                         selected = current == d.route,
-                        onClick = { current = d.route },
+                        onClick = {
+                            innerNav.navigate(d.route) {
+                                popUpTo(innerNav.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
                         icon = { d.icon?.let { Icon(it, contentDescription = d.label) } },
                         label = { Text(d.label) }
                     )
@@ -144,33 +152,36 @@ fun MainWithBottomBar() {
             }
         }
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-
-            // HOME
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .visible(current == Dest.Home.route)
-            ) {
+        NavHost(
+            navController = innerNav,
+            startDestination = Dest.Home.route,
+            modifier = Modifier.padding(padding)
+        ) {
+            // HOME con navegación al detalle
+            composable(Dest.Home.route) {
                 val vm: HomeViewModel = viewModel()
-                HomeScreen(vm)
+                HomeScreen(vm, innerNav)   // 👈 aquí le pasas innerNav
             }
 
-            // SEARCH  -> ahora usa BuscarScreen()
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .visible(current == Dest.Search.route)
-            ) {
+            // BUSINESS DETAIL
+            composable(
+                route = "businessDetail/{businessId}",
+                arguments = listOf(navArgument("businessId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val businessId = backStackEntry.arguments?.getInt("businessId") ?: 0
+                BusinessDetailScreen(
+                    navController = innerNav,
+                    businessId = businessId
+                )
+            }
+
+            // SEARCH
+            composable(Dest.Search.route) {
                 BuscarScreen()
             }
 
-            // ACCOUNT (placeholder)
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .visible(current == Dest.Account.route)
-            ) {
+            // ACCOUNT
+            composable(Dest.Account.route) {
                 Surface(Modifier.fillMaxSize()) {
                     Text(
                         "Cuenta (próximamente)",

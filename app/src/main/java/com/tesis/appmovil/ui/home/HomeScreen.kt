@@ -1,9 +1,11 @@
 package com.tesis.appmovil.ui.home
 
 import androidx.compose.ui.tooling.preview.Preview
-
-
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -21,61 +23,86 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.tesis.appmovil.models.Service
 import com.tesis.appmovil.viewmodel.HomeViewModel
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
 import com.tesis.appmovil.ChatActivity
 
-
 @Composable
-fun HomeScreen(vm: HomeViewModel) {
+fun HomeScreen(vm: HomeViewModel, navController: NavController? = null) {
     val state by vm.uiState.collectAsState()
     val context = LocalContext.current
 
     Scaffold(
         floatingActionButton = {
-            // Puedes usar FloatingActionButton o ExtendedFloatingActionButton
             ExtendedFloatingActionButton(
-                text = { Text("Ayuda") }, // o "Chat"
+                text = { Text("Ayuda") },
                 icon = { Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente") },
-                onClick = {
-                    context.startActivity(Intent(context, ChatActivity::class.java))
-                },
+                onClick = { context.startActivity(Intent(context, ChatActivity::class.java)) },
                 shape = RoundedCornerShape(16.dp)
             )
         },
-        floatingActionButtonPosition = FabPosition.End // esquina inferior derecha
+        floatingActionButtonPosition = FabPosition.End
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { HeaderGreeting(name = state.userName, location = state.location) }
-
-            item { SectionTitle("Estilos cerca de ti") }
+            item {
+                HeaderGreeting(name = state.userName, location = state.location)
+            }
+            item {
+                SectionTitle("Ofertas especiales")
+            }
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(state.nearby) { s -> SmallServiceCard(s) }
+                    items(state.nearby) { service ->
+                        SmallServiceCard(
+                            service = service,
+                            onClick = { navController?.navigate("businessDetail/${service.id}") }
+                        )
+                    }
                 }
             }
-
-            item { SectionTitle("Servicios destacados en tu zona") }
+            item {
+                SectionTitle("Estilos cerca de tí")
+            }
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(state.featured) { s -> FeaturedCard(s) }
+                    items(state.featured) { service ->
+                        FeaturedCard(
+                            service = service,
+                            onClick = { navController?.navigate("businessDetail/${service.id}") }
+                        )
+                    }
                 }
             }
-
-            item { SectionTitle("Ofertas especiales") }
-            items(state.deals) { s -> DealRowCard(s) }
-
+            item {
+                SectionTitle("Servicios destacados en tu zona")
+            }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(state.deals) { service ->
+                        DealRowCard(
+                            service = service,
+                            onClick = { navController?.navigate("businessDetail/${service.id}") }
+                        )
+                    }
+                }
+            }
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
@@ -84,67 +111,167 @@ fun HomeScreen(vm: HomeViewModel) {
 @Composable
 private fun HeaderGreeting(name: String, location: String) {
     Column(Modifier.fillMaxWidth()) {
-        //Text(text = "Hola, $name", style = MaterialTheme.typography.titleMedium)
         Text(
-            text = "¿Qué harás hoy?",
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+            text = "Hola, $name",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Normal)
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(2.dp))
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(horizontal = 12.dp, vertical = 6.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Outlined.LocationOn, contentDescription = null)
-            Spacer(Modifier.width(6.dp))
-            Text(location, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "¿Qué harás hoy?",
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Spacer(Modifier.width(4.dp))
+                Text(location, style = MaterialTheme.typography.labelSmall)
+                Icon(Icons.Outlined.LocationOn, contentDescription = null)
+            }
         }
     }
 }
 
-@Composable private fun SectionTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+    )
 }
 
 @Composable
-private fun SmallServiceCard(s: Service) {
+private fun SmallServiceCard(service: Service, onClick: () -> Unit = {}) {
+    val purple = MaterialTheme.colorScheme.primary
+    val onPurple = MaterialTheme.colorScheme.onPrimary
+    val cardWidth = 360.dp
+    val cardHeight = 160.dp
+
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         modifier = Modifier
-            .width(220.dp)
-            .height(150.dp)
+            .width(cardWidth)
+            .height(cardHeight)
+            .clickable(onClick = onClick)
     ) {
-        Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                AsyncImage(
-                    model = s.imageUrl,
-                    contentDescription = s.title,
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                )
-                Column(Modifier.weight(1f)) {
-                    Text(s.title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+        Row(Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
+                    .background(purple)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White.copy(alpha = 0.98f)
+                    ) {
+                        Text(
+                            text = "¡Tiempo limitado!",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            color = purple,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "${s.businessName} • servicio de ${s.duration}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2
+                        text = service.title,
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.Top) {
+                        Text(
+                            text = "Hasta un",
+                            color = Color.White.copy(alpha = 0.95f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "20%",
+                            color = Color.White,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = service.businessName,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium
                     )
                 }
             }
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Box(
+                modifier = Modifier
+                    .width(160.dp)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center
             ) {
-                FilledTonalButton(onClick = { /* detalle */ }, shape = RoundedCornerShape(12.dp)) {
-                    Text("S/ ${"%.2f".format(s.price)}")
-                }
-                FilledTonalIconButton(onClick = { /* ir */ }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Outlined.ArrowForward, contentDescription = "Ver")
+                AsyncImage(
+                    model = service.imageUrl,
+                    contentDescription = service.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 12.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    tonalElevation = 4.dp,
+                    color = Color.White
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Obtener oferta",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = purple,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(purple),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.ArrowForward,
+                                contentDescription = null,
+                                tint = onPurple,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -152,18 +279,114 @@ private fun SmallServiceCard(s: Service) {
 }
 
 @Composable
-private fun FeaturedCard(s: Service) {
-    Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.width(290.dp)) {
+private fun FeaturedCard(service: Service, onClick: () -> Unit = {}) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val horizontalPadding = 12.dp * 2
+    val spacing = 8.dp
+    val cardWidth = (screenWidth - horizontalPadding - spacing) / 2
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .width(cardWidth)
+            .clickable(onClick = onClick)
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+            ) {
+                AsyncImage(
+                    model = service.imageUrl,
+                    contentDescription = service.title,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.66f)
+                                )
+                            )
+                        )
+                )
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = service.title,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = service.location,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "S/ ${service.price}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DealRowCard(service: Service, onClick: () -> Unit = {}) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val horizontalPadding = 12.dp * 2
+    val spacing = 8.dp
+    val cardWidth = (screenWidth - horizontalPadding - spacing) / 2
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .width(cardWidth)
+            .clickable(onClick = onClick)
+    ) {
         Column {
             Box {
                 AsyncImage(
-                    model = s.imageUrl,
-                    contentDescription = s.title,
+                    model = service.imageUrl,
+                    contentDescription = service.title,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp)
+                        .height(130.dp)
                 )
-                if (s.rating != null) {
+                if (service.rating != null) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -172,14 +395,22 @@ private fun FeaturedCard(s: Service) {
                             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text("★ ${"%.1f".format(s.rating)}", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            "★ ${"%.1f".format(service.rating)}",
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                 }
             }
             Column(Modifier.padding(12.dp)) {
-                Text(s.title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
                 Text(
-                    s.duration,
+                    service.businessName,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    service.location,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -187,74 +418,24 @@ private fun FeaturedCard(s: Service) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.secondaryContainer
+                        color = MaterialTheme.colorScheme.outlineVariant
                     ) {
                         Text(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            text = s.tag ?: "Servicio",
+                            text = service.tag ?: "Servicio",
                             style = MaterialTheme.typography.labelMedium
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        s.location,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    FilledTonalIconButton(onClick = { /* ver */ }) {
-                        Icon(Icons.Outlined.ArrowForward, contentDescription = "Ver")
-                    }
                 }
             }
         }
     }
 }
 
-@Composable
-private fun DealRowCard(s: Service) {
-    Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(
-                model = s.imageUrl,
-                contentDescription = s.title,
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(12.dp))
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(s.title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                Text(
-                    "${s.businessName} • ${s.duration}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                FilledTonalButton(onClick = { }, shape = RoundedCornerShape(12.dp)) {
-                    Text("S/ ${"%.2f".format(s.price)}")
-                }
-                Spacer(Modifier.height(6.dp))
-                FilledTonalIconButton(onClick = { }) {
-                    Icon(Icons.Outlined.ArrowForward, contentDescription = "Ir")
-                }
-            }
-        }
-    }
-
-
-}
-
-//PARA VER EN SPLIT Y DESIGN
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun HomeScreenPreview() {
-    val vm = HomeViewModel() // usa FakeRepository por defecto
+    val vm = HomeViewModel()
     HomeScreen(vm)
 }
-
