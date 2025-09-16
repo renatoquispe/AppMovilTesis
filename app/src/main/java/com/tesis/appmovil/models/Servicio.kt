@@ -1,11 +1,22 @@
+
+//PRIMER VERSION
 package com.tesis.appmovil.models
 
+import com.tesis.appmovil.data.remote.request.NegocioResponse
+
+//data class EstadoAuditoria(
+//    val type: String,
+//    val data: List<Int>
+//)
 data class Servicio(
-    val id_servicio: Int,
-    val id_negocio: Int,
+    val idServicio: Int,
     val nombre: String,
-    val descripcion: String?,
-    val precio: Double,
-    val duracion_minutos: Int,
-    val estado_auditoria: Boolean   // lo manda tu back
+    val descuento: Double?,        // nuevo campo
+    val imagenUrl: String?,
+    val precio: String,
+    val duracionMinutos: Int,
+    val estadoAuditoria: Int,
+    val idNegocio: Int,
+    val negocio: NegocioResponse
 )
+

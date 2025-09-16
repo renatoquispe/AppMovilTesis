@@ -106,25 +106,52 @@ interface ApiService {
     suspend fun eliminarNegocioImagen(@Path("id") id: Long): Response<Unit>
 
     // ---------- SERVICIOS ----------
+
     @GET("servicios")
     suspend fun getServicios(
         @Query("id_negocio") idNegocio: Int? = null
-    ): Response<List<Servicio>>
+    ): Response<ApiResponse<List<Servicio>>>
 
+
+    /** Obtener un servicio por id */
     @GET("servicios/{id}")
-    suspend fun getServicio(@Path("id") id: Int): Response<Servicio>
+    suspend fun getServicio(
+        @Path("id") id: Int
+    ): Response<ApiResponse<Servicio>>
 
+//    @GET("servicios")
+//    suspend fun getServicios(): Response<ApiResponse<List<Servicio>>>
+
+//    @POST("servicios")
+//    suspend fun createServicio(@Body body: ServicioCreate): Response<ApiResponse<Servicio>>
+    /** Crear servicio */
     @POST("servicios")
-    suspend fun createServicio(@Body body: ServicioCreate): Response<Servicio>
+    suspend fun createServicio(
+        @Body body: ServicioCreate
+    ): Response<ApiResponse<Servicio>>
 
+    /** Actualizar servicio */
     @PUT("servicios/{id}")
     suspend fun updateServicio(
         @Path("id") id: Int,
         @Body body: ServicioUpdate
-    ): Response<Servicio>
+    ): Response<ApiResponse<Servicio>>
 
+    /** Eliminar servicio */
     @DELETE("servicios/{id}")
-    suspend fun deleteServicio(@Path("id") id: Int): Response<Unit>
+    suspend fun deleteServicio(
+        @Path("id") id: Int
+    ): Response<Unit>
+
+//    @PUT("servicios/{id}")
+//        suspend fun updateServicio(
+//            @Path("id") id: Int,
+//            @Body body: ServicioUpdate
+//        ): Response<ApiResponse<Servicio>>
+//
+//
+//    @DELETE("servicios/{id}")
+//    suspend fun deleteServicio(@Path("id") id: Int): Response<Unit>
 
     // ---------- HORARIOS ----------
     @GET("horarios")
