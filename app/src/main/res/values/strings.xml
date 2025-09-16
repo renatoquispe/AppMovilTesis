@@ -3,7 +3,7 @@
 
     <!-- Tu client id actual -->
     <string name="google_web_client_id">
-        139741296600-p5mavsvu3vvndflh7f83et2b57lo34c9.apps.googleusercontent.com
+        139741296600-9fe45bjtkg1co09u551bavhk2o8f5snj.apps.googleusercontent.com
     </string>
 
     <!-- 🔑 API key de Google Maps -->
@@ -11,3 +11,4 @@
         AIzaSyD5Eda0WQlzNKh7yUxUFtTnD2r7fyGkOdQ
     </string>
 </resources>
+
