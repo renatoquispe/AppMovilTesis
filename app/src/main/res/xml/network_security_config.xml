@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <domain-config>
-        <domain includeSubdomains="true">dry-states-look.loca.lt</domain>
+        <domain includeSubdomains="true">easy-planets-draw.loca.lt</domain>
     </domain-config>
 </network-security-config>
 
