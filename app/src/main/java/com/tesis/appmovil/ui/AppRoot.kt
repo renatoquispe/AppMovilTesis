@@ -39,6 +39,7 @@ import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.ui.search.BuscarScreen     // <- usa la pantalla con controles
 import com.tesis.appmovil.viewmodel.AuthViewModel
 import com.tesis.appmovil.viewmodel.HomeViewModel
+import com.tesis.appmovil.viewmodel.ServicioViewModel
 
 // ----------------- Rutas -----------------
 sealed class Dest(
@@ -158,10 +159,16 @@ fun MainWithBottomBar() {
             modifier = Modifier.padding(padding)
         ) {
             // HOME con navegación al detalle
+//            composable(Dest.Home.route) {
+//                val vm: HomeViewModel = viewModel()
+//                HomeScreen(vm, innerNav)   // 👈 aquí le pasas innerNav
+//            }
+            // HOME con navegación al detalle
             composable(Dest.Home.route) {
-                val vm: HomeViewModel = viewModel()
-                HomeScreen(vm, innerNav)   // 👈 aquí le pasas innerNav
+                val vm: ServicioViewModel = viewModel()
+                HomeScreen(vm, innerNav)   // 👈 sigue recibiendo innerNav
             }
+
 
             // BUSINESS DETAIL
             composable(

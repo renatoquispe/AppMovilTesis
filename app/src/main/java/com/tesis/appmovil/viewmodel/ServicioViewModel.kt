@@ -75,7 +75,7 @@ class ServicioViewModel(
             _ui.update { it.copy(mutando = true, error = null) }
             runCatching { repo.actualizar(id, cambios) }
                 .onSuccess { actualizado ->
-                    val lista = _ui.value.servicios.map { if (it.id_servicio == id) actualizado else it }
+                    val lista = _ui.value.servicios.map { if (it.idServicio == id) actualizado else it }
                     _ui.update { it.copy(mutando = false, servicios = lista, seleccionado = actualizado) }
                 }
                 .onFailure { e ->
@@ -90,7 +90,7 @@ class ServicioViewModel(
             _ui.update { it.copy(mutando = true, error = null) }
             runCatching { repo.eliminar(id) }
                 .onSuccess {
-                    val lista = _ui.value.servicios.filterNot { it.id_servicio == id }
+                    val lista = _ui.value.servicios.filterNot { it.idServicio == id }
                     _ui.update { it.copy(mutando = false, servicios = lista, seleccionado = null) }
                 }
                 .onFailure { e ->
