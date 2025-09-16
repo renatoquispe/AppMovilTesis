@@ -1,8 +1,7 @@
-// src/ui/auth/LoginScreen.kt
-
 package com.tesis.appmovil.ui.auth
 
 import android.app.Activity
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,13 +16,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.tasks.OnCompleteListener
 import com.tesis.appmovil.R
 import com.tesis.appmovil.viewmodel.AuthViewModel
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun LoginScreen(
@@ -90,6 +89,22 @@ fun LoginScreen(
             )
         }
 
+        Spacer(Modifier.height(2.dp))
+
+        // Navegar a registro
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("¿No tienes una cuenta? ", style = MaterialTheme.typography.bodyMedium)
+            TextButton(
+                onClick = { onNavigateToRegister() },
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text("Regístrate", color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
         Spacer(Modifier.height(18.dp))
 
         // Correo
@@ -138,6 +153,16 @@ fun LoginScreen(
             )
         }
 
+        // Olvidaste contraseña
+        Box(Modifier.fillMaxWidth()) {
+            TextButton(
+                onClick = { /* TODO recuperación */ },
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
+                Text("¿Olvidaste tu contraseña?", color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
 
         // Botón de inicio de sesión normal
@@ -182,10 +207,9 @@ fun LoginScreen(
                     tint = Color.Unspecified
                 )
             }
-            // Google Sign-In
+            // Google Sign-In con cierre de sesión para forzar selector de cuentas
             IconButton(
                 onClick = {
-                    // Forzar selector de cuentas
                     googleClient.signOut()
                         .addOnCompleteListener(OnCompleteListener<Void> {
                             googleLauncher.launch(googleClient.signInIntent)
