@@ -143,15 +143,6 @@ interface ApiService {
         @Path("id") id: Int
     ): Response<Unit>
 
-//    @PUT("servicios/{id}")
-//        suspend fun updateServicio(
-//            @Path("id") id: Int,
-//            @Body body: ServicioUpdate
-//        ): Response<ApiResponse<Servicio>>
-//
-//
-//    @DELETE("servicios/{id}")
-//    suspend fun deleteServicio(@Path("id") id: Int): Response<Unit>
 
     // ---------- HORARIOS ----------
     @GET("horarios")
