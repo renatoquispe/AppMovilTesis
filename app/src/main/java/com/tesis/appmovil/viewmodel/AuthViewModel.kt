@@ -19,7 +19,8 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val user: String? = null,          // guardamos solo el correo
-    val role: UserRole? = null
+    val role: UserRole? = null,
+    val token: String? = null //probando esto Susan
 )
 
 class AuthViewModel : ViewModel() {
@@ -94,11 +95,21 @@ class AuthViewModel : ViewModel() {
             try {
                 val response = RetrofitClient.api.login(LoginRequest(state.email, state.password))
                 if (response.isSuccessful && response.body()?.success == true) {
-                    val userData = response.body()!!.data!!.usuario
+//                    val userData = response.body()!!.data!!.usuario //cambios susan
+
+
+                    val body = response.body()!!
+                    val userData = body.data!!.usuario
+                    val token = body.data!!.token  // 👉 aquí lo recibes
+
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        user = userData.correo
+                        user = userData.correo,
+                        token = token //SUSANN
                     )
+                    // 👇 Aquí conectas el token con Retrofit
+                    RetrofitClient.setTokenProvider { _uiState.value.token }
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

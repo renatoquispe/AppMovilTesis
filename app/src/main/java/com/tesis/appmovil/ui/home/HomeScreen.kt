@@ -43,9 +43,11 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
     val context = LocalContext.current
 
     // 🔹 Llamamos a la API al cargar la pantalla
+
     LaunchedEffect(Unit) {
         vm.cargarServicios()
     }
+
 
     Scaffold(
         floatingActionButton = {
@@ -69,7 +71,6 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                 Text("Error: ${state.error}", color = Color.Red)
             }
         } else {
-            val negociosUnicos = state.servicios.distinctBy { it.negocio.idNegocio } //NUEVA LINEA
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -86,7 +87,9 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                         items(state.servicios) { servicio ->
                             SmallServiceCard(
                                 servicio = servicio,
-                                onClick = { navController?.navigate("businessDetail/${servicio.idServicio}") }
+//                                onClick = { navController?.navigate("businessDetail/${servicio.idServicio}") }
+                                onClick = { navController?.navigate("businessDetail/${servicio.idNegocio}") }
+
                             )
                         }
                     }
@@ -99,7 +102,9 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                         items(state.servicios.take(4)) { servicio -> // Tomamos solo 4 para ejemplo
                             FeaturedCard(
                                 servicio = servicio,
-                                onClick = { navController?.navigate("businessDetail/${servicio.idServicio}") }
+//                                onClick = { navController?.navigate("businessDetail/${servicio.idServicio}") }
+                                onClick = { navController?.navigate("businessDetail/${servicio.idNegocio}") }
+
                             )
                         }
                     }
@@ -117,12 +122,18 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
 //                }
                 item { SectionTitle("Servicios destacados en tu zona") }
                 item {
+                    val negociosUnicos = state.servicios
+                        .groupBy { it.idNegocio }   // Agrupa por idNegocio
+                        .map { it.value.first() }
+
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(negociosUnicos.take(3)) { servicio ->
-                            DealRowCard(
+                        DealRowCard(
                                 servicio = servicio,
-                                onClick = { navController?.navigate("businessDetail/${servicio.idServicio}") }
-                            )
+//                                onClick = { navController?.navigate("businessDetail/${servicio.idServicio}") }
+                            onClick = { navController?.navigate("businessDetail/${servicio.idNegocio}") }
+
+                        )
                         }
                     }
                 }

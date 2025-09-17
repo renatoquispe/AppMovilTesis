@@ -39,6 +39,7 @@ import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.ui.search.BuscarScreen     // <- usa la pantalla con controles
 import com.tesis.appmovil.viewmodel.AuthViewModel
 import com.tesis.appmovil.viewmodel.HomeViewModel
+import com.tesis.appmovil.viewmodel.NegocioViewModel
 import com.tesis.appmovil.viewmodel.ServicioViewModel
 
 // ----------------- Rutas -----------------
@@ -171,16 +172,20 @@ fun MainWithBottomBar() {
 
 
             // BUSINESS DETAIL
+            // BUSINESS DETAIL
             composable(
-                route = "businessDetail/{businessId}",
-                arguments = listOf(navArgument("businessId") { type = NavType.IntType })
+                route = "businessDetail/{idNegocio}",
+                arguments = listOf(navArgument("idNegocio") { type = NavType.IntType })
             ) { backStackEntry ->
-                val businessId = backStackEntry.arguments?.getInt("businessId") ?: 0
-                BusinessDetailScreen(
-                    navController = innerNav,
-                    businessId = businessId
+                val idNegocio = backStackEntry.arguments?.getInt("idNegocio") ?: 0
+                val vm: NegocioViewModel = viewModel()
+                BusinessDetailScreen(idNegocio = idNegocio, vm = vm, onBack = {
+                    innerNav.popBackStack()
+                }
                 )
             }
+
+
 
             // SEARCH
             composable(Dest.Search.route) {
@@ -192,7 +197,9 @@ fun MainWithBottomBar() {
                 Surface(Modifier.fillMaxSize()) {
                     Text(
                         "Cuenta (próximamente)",
-                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
                         textAlign = TextAlign.Center
                     )
                 }

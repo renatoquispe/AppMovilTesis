@@ -10,12 +10,31 @@ import com.tesis.appmovil.models.Servicio
 import retrofit2.HttpException
 import retrofit2.Response
 
+
 class ServicioRepository(
     private val api: ApiService = RetrofitClient.api
 ) {
     /** Lista servicios; opcionalmente por negocio */
-    suspend fun listar(idNegocio: Int? = null): List<Servicio> =
-        api.getServicios(idNegocio).unwrap()
+//    suspend fun listar(idNegocio: Int? = null): List<Servicio> =
+//        api.getServicios(idNegocio).unwrap()
+
+    suspend fun listar(idNegocio: Int? = null): List<Servicio> {
+        val response = api.getServicios(idNegocio)
+
+        if (response.isSuccessful) {
+            val apiResponse = response.body()
+            if (apiResponse != null && apiResponse.success && apiResponse.data != null) {
+                // Si todo está bien, devuelve solo la lista de datos.
+                return apiResponse.data
+            } else {
+                // Si el cuerpo de la respuesta indica un error, lánzalo.
+                throw Exception(apiResponse?.message ?: "Respuesta vacía o fallida de la API")
+            }
+        } else {
+            // Si la llamada HTTP falló, lanza un error con el código.
+            throw Exception("Error de red: ${response.code()}")
+        }
+    }
 
     /** Obtiene un servicio por id */
     suspend fun obtener(id: Int): Servicio =

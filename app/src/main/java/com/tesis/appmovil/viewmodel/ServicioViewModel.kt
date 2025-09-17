@@ -7,17 +7,37 @@ import com.tesis.appmovil.models.Servicio
 import com.tesis.appmovil.repository.ServicioRepository
 import com.tesis.appmovil.data.remote.dto.ServicioCreate
 import com.tesis.appmovil.data.remote.dto.ServicioUpdate
+import com.tesis.appmovil.data.remote.request.NegocioResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+//data class ServicioUiState(
+//    val isLoading: Boolean = false,
+//    val mutando: Boolean = false,
+//    val servicios: List<Servicio> = emptyList(),
+//    val seleccionado: Servicio? = null,
+//    val error: String? = null,
+//    val negociosDestacados: List<Servicio> = emptyList(),
+//
+//    // Añade estos estados para el detalle
+//    // Estados para el detalle
+//    val isLoadingDetalle: Boolean = false,
+////    val negocioDetalle: NegocioResponse? = null,
+////    val isLoadingDetalle: Boolean = false,
+//    val errorDetalle: String? = null
+//)
 data class ServicioUiState(
     val isLoading: Boolean = false,
     val mutando: Boolean = false,
     val servicios: List<Servicio> = emptyList(),
     val seleccionado: Servicio? = null,
-    val error: String? = null
+    val error: String? = null,
+    val negociosDestacados: List<Servicio> = emptyList(),
+    // SOLO estos estados para el detalle
+    val isLoadingDetalle: Boolean = false,
+    val errorDetalle: String? = null
 )
 
 class ServicioViewModel(
@@ -27,32 +47,71 @@ class ServicioViewModel(
     private val _ui = MutableStateFlow(ServicioUiState())
     val ui: StateFlow<ServicioUiState> = _ui
 
-    /** Listar (opcionalmente por id_negocio) */
-    fun cargarServicios(idNegocio: Int? = null) {
+    fun obtenerNegocioDesdeServicios(idServicio: Int): NegocioResponse? {
+        return _ui.value.servicios.find { it.idServicio == idServicio }?.negocio
+    }
+
+    fun obtenerServicio(id: Int) {
         viewModelScope.launch {
-            _ui.update { it.copy(isLoading = true, error = null) }
-            runCatching { repo.listar(idNegocio) }
-                .onSuccess { lista ->
-                    _ui.update { it.copy(isLoading = false, servicios = lista) }
+            _ui.update { it.copy(isLoadingDetalle = true, errorDetalle = null) }
+
+            runCatching { repo.obtener(id) }
+                .onSuccess { servicio ->
+                    _ui.update {
+                        it.copy(
+                            isLoadingDetalle = false,
+                            seleccionado = servicio,
+                            errorDetalle = null
+                        )
+                    }
                 }
                 .onFailure { e ->
-                    _ui.update { it.copy(isLoading = false, error = e.message ?: "Error al cargar servicios") }
+                    _ui.update {
+                        it.copy(
+                            isLoadingDetalle = false,
+                            errorDetalle = e.message ?: "No se pudo obtener el servicio"
+                        )
+                    }
                 }
         }
     }
 
-    /** Obtener detalle */
-    fun obtenerServicio(id: Int) {
+    fun obtenerServiciosDeNegocio(idNegocio: Int): List<Servicio> {
+        return _ui.value.servicios.filter { it.negocio.idNegocio == idNegocio }
+    }
+
+    fun cargarDetalleNegocio(idNegocio: Int) {
         viewModelScope.launch {
-            runCatching { repo.obtener(id) }
-                .onSuccess { s ->
-                    _ui.update { it.copy(seleccionado = s) }
+            _ui.update { it.copy(isLoadingDetalle = true, errorDetalle = null) }
+            try {
+                // Buscar el negocio en los servicios ya cargados
+                val negocio = _ui.value.servicios
+                    .firstOrNull { it.negocio.idNegocio == idNegocio }
+                    ?.negocio
+
+                _ui.update {
+                    it.copy(
+                        isLoadingDetalle = false,
+                        errorDetalle = if (negocio == null) "Negocio no encontrado" else null
+                        // No necesitamos almacenar negocioDetalle por separado
+                    )
                 }
-                .onFailure { e ->
-                    _ui.update { it.copy(error = e.message ?: "No se pudo obtener el servicio") }
+            } catch (e: Exception) {
+                _ui.update {
+                    it.copy(
+                        isLoadingDetalle = false,
+                        errorDetalle = e.message ?: "Error al cargar detalle"
+                    )
                 }
+            }
         }
     }
+
+    fun obtenerServicioPorId(id: Int): Servicio? {
+        return ui.value.servicios.find { it.idServicio == id }
+    }
+
+
 
     /** Crear */
     fun crearServicio(body: ServicioCreate) {
@@ -68,6 +127,7 @@ class ServicioViewModel(
                 }
         }
     }
+
 
     /** Actualizar */
     fun actualizarServicio(id: Int, cambios: ServicioUpdate) {
@@ -100,4 +160,27 @@ class ServicioViewModel(
     }
 
     fun limpiarError() = _ui.update { it.copy(error = null) }
+    /** Listar servicios */
+    fun cargarServicios(idNegocio: Int? = null) {
+        viewModelScope.launch {
+            _ui.update { it.copy(isLoading = true, error = null) }
+            runCatching { repo.listar(idNegocio) }
+                .onSuccess { lista ->
+                    val negociosUnicos = lista
+                        .distinctBy { it.negocio.idNegocio }
+                        .take(3)
+                    _ui.update {
+                        it.copy(
+                            isLoading = false,
+                            servicios = lista,
+                            negociosDestacados = negociosUnicos
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _ui.update { it.copy(isLoading = false, error = e.message ?: "Error al cargar servicios") }
+                }
+        }
+    }
+
 }

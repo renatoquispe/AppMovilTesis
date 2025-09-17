@@ -7,18 +7,29 @@ import com.tesis.appmovil.models.Negocio
 import com.tesis.appmovil.repository.NegocioRepository
 import com.tesis.appmovil.data.remote.dto.NegocioCreate
 import com.tesis.appmovil.data.remote.dto.NegocioUpdate
+import com.tesis.appmovil.data.remote.request.NegocioResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+//data class NegocioUiState(
+//    val isLoading: Boolean = false,
+//    val mutando: Boolean = false,
+//    val negocios: List<Negocio> = emptyList(),
+////    val seleccionado: Negocio? = null,
+//    val seleccionado: NegocioResponse? = null, // 👈 cambio aquí
+//    val error: String? = null
+//)
 data class NegocioUiState(
     val isLoading: Boolean = false,
     val mutando: Boolean = false,
     val negocios: List<Negocio> = emptyList(),
     val seleccionado: Negocio? = null,
+    val detalle: NegocioResponse? = null,
     val error: String? = null
 )
+
 
 class NegocioViewModel(
     private val repo: NegocioRepository = NegocioRepository()
@@ -38,13 +49,41 @@ class NegocioViewModel(
     }
 
     /** Detalle */
+//    fun obtenerNegocio(id: Int) {
+//        viewModelScope.launch {
+//            _ui.update { it.copy(isLoading = true, error = null) }
+//            runCatching { repo.obtenerDetalle(id) } // 👈 este debe devolver NegocioResponse
+//                .onSuccess { negocio ->
+//                    _ui.update { it.copy(isLoading = false, seleccionado = negocio) }
+//                }
+//                .onFailure { e ->
+//                    _ui.update { it.copy(isLoading = false, error = e.message ?: "No se pudo obtener el negocio") }
+//                }
+//        }
+//    }
+
+    // En NegocioViewModel
     fun obtenerNegocio(id: Int) {
         viewModelScope.launch {
-            runCatching { repo.obtener(id) }
-                .onSuccess { n -> _ui.update { it.copy(seleccionado = n) } }
-                .onFailure { e -> _ui.update { it.copy(error = e.message ?: "No se pudo obtener el negocio") } }
+            _ui.update { it.copy(isLoading = true, error = null) }
+            runCatching { repo.obtenerDetalle(id) }
+                .onSuccess { detalle ->
+                    _ui.update { it.copy(isLoading = false, detalle = detalle) }
+                }
+                .onFailure { e ->
+                    _ui.update { it.copy(isLoading = false, error = e.message) }
+                }
         }
     }
+
+
+//    fun obtenerNegocio(id: Int) {
+//        viewModelScope.launch {
+//            runCatching { repo.obtener(id) }
+//                .onSuccess { n -> _ui.update { it.copy(seleccionado = n) } }
+//                .onFailure { e -> _ui.update { it.copy(error = e.message ?: "No se pudo obtener el negocio") } }
+//        }
+//    }
 
     /** Crear */
     fun crearNegocio(body: NegocioCreate) {

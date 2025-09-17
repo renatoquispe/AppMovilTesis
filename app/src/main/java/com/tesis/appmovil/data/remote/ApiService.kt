@@ -3,6 +3,7 @@ import com.tesis.appmovil.data.remote.dto.*
 import com.tesis.appmovil.data.remote.request.GoogleLoginRequest
 import com.tesis.appmovil.data.remote.request.LoginRequest
 import com.tesis.appmovil.data.remote.request.LoginResponse
+import com.tesis.appmovil.data.remote.request.NegocioResponse
 import com.tesis.appmovil.models.*
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -70,20 +71,42 @@ interface ApiService {
         @Query("id_categoria") idCategoria: Int? = null,
         @Query("id_ubicacion") idUbicacion: Int? = null,
         @Query("q") q: String? = null
-    ): Response<List<Negocio>>   // usa tu models/Negocio.kt
+    ): Response<ApiResponse<List<Negocio>>>   // 👈 aquí va ApiResponse
+//    @GET("negocios")
+//    suspend fun getNegocios(
+//        @Query("id_categoria") idCategoria: Int? = null,
+//        @Query("id_ubicacion") idUbicacion: Int? = null,
+//        @Query("q") q: String? = null
+//    ): Response<List<Negocio>>   // usa tu models/Negocio.kt
+
+
 
     @GET("negocios/{id}")
-    suspend fun getNegocio(@Path("id") id: Int): Response<Negocio>
+    suspend fun getNegocio(
+        @Path("id") id: Int
+    ): Response<ApiResponse<Negocio>>   // 👈 aquí también
+//    @GET("negocios/{id}")
+//    suspend fun getNegocio(@Path("id") id: Int): Response<Negocio>
+
+//    @POST("negocios")
+//    suspend fun createNegocio(@Body body: NegocioCreate): Response<Negocio>
 
     @POST("negocios")
-    suspend fun createNegocio(@Body body: NegocioCreate): Response<Negocio>
+    suspend fun createNegocio(@Body body: NegocioCreate): Response<ApiResponse<Negocio>>
 
+//    @PUT("negocios/{id}")
+//    suspend fun updateNegocio(
+//        @Path("id") id: Int,
+//        @Body body: NegocioUpdate
+//    ): Response<Negocio>
     @PUT("negocios/{id}")
     suspend fun updateNegocio(
         @Path("id") id: Int,
         @Body body: NegocioUpdate
-    ): Response<Negocio>
+    ): Response<ApiResponse<Negocio>>
 
+//    @DELETE("negocios/{id}")
+//    suspend fun deleteNegocio(@Path("id") id: Int): Response<Unit>
     @DELETE("negocios/{id}")
     suspend fun deleteNegocio(@Path("id") id: Int): Response<Unit>
 
@@ -93,6 +116,13 @@ interface ApiService {
     suspend fun listarNegocioImagenes(
         @Query("negocioId") negocioId: Long
     ): Response<List<NegocioImagen>>
+
+    // En ApiService
+    @GET("negocios/{id}")
+    suspend fun getNegocioDetalle(
+        @Path("id") id: Int
+    ): Response<ApiResponse<NegocioResponse>>
+
 
     @Multipart
     @POST("negocio-imagenes")
