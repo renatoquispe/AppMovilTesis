@@ -1,8 +1,6 @@
 package com.tesis.appmovil.ui.home
 
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.unit.dp
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,28 +24,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.tesis.appmovil.models.Servicio
-import com.tesis.appmovil.viewmodel.ServicioViewModel
-import android.content.Intent
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.tesis.appmovil.ChatActivity
+import com.tesis.appmovil.models.Servicio
+import com.tesis.appmovil.viewmodel.ServicioViewModel
 
 @Composable
 fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
     val state by vm.ui.collectAsState()
     val context = LocalContext.current
 
-    // 🔹 Llamamos a la API al cargar la pantalla
-
-    LaunchedEffect(Unit) {
-        vm.cargarServicios()
-    }
-
+    LaunchedEffect(Unit) { vm.cargarServicios() }
 
     Scaffold(
         floatingActionButton = {
@@ -60,85 +54,98 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
         },
         floatingActionButtonPosition = FabPosition.End
     ) { padding ->
-        if (state.isLoading) {
-            // Loader mientras llegan los datos
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+        when {
+            state.isLoading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
-        } else if (state.error != null) {
-            // Error al cargar
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Error: ${state.error}", color = Color.Red)
+            state.error != null -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Error: ${state.error}", color = Color.Red)
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    HeaderGreeting(name = "Invitado", location = "Lima, Perú")
-                }
-                item { SectionTitle("Servicios disponibles") }
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(state.servicios) { servicio ->
-                            SmallServiceCard(
-                                servicio = servicio,
-//                                onClick = { navController?.navigate("businessDetail/${servicio.idServicio}") }
-                                onClick = { navController?.navigate("businessDetail/${servicio.idNegocio}") }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item { HeaderGreeting(name = "Invitado", location = "Lima, Perú") }
 
-                            )
+                    item { SectionTitle("Servicios disponibles") }
+                    item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(
+                                state.servicios,
+                                key = { it.idServicio } // clave estable por servicio
+                            ) { servicio ->
+                                SmallServiceCard(
+                                    servicio = servicio,
+                                    onClick = {
+                                        // Navegación SEGURA
+                                        val idDestino = (servicio.idNegocio.takeIf { id -> id > 0 }
+                                            ?: servicio.negocio.idNegocio)
+                                        if (idDestino > 0) {
+                                            navController?.navigate("businessDetail/$idDestino")
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
-                }
 
-                // NUEVAS SECCIONES AÑADIDAS
-                item { SectionTitle("Estilos cerca de ti") }
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(state.servicios.take(4)) { servicio -> // Tomamos solo 4 para ejemplo
-                            FeaturedCard(
-                                servicio = servicio,
-//                                onClick = { navController?.navigate("businessDetail/${servicio.idServicio}") }
-                                onClick = { navController?.navigate("businessDetail/${servicio.idNegocio}") }
-
-                            )
+                    item { SectionTitle("Estilos cerca de ti") }
+                    item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(
+                                state.servicios.take(4),
+                                key = { it.idServicio }
+                            ) { servicio ->
+                                FeaturedCard(
+                                    servicio = servicio,
+                                    onClick = {
+                                        val idDestino = (servicio.idNegocio.takeIf { id -> id > 0 }
+                                            ?: servicio.negocio.idNegocio)
+                                        if (idDestino > 0) {
+                                            navController?.navigate("businessDetail/$idDestino")
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
-                }
-//                item { SectionTitle("Servicios destacados en tu zona") }
-//                item {
-//                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-//                        items(state.servicios.take(3)) { servicio -> // Tomamos solo 3 para ejemplo
-//                            DealRowCard(
-//                                servicio = servicio,
-//                                onClick = { navController?.navigate("businessDetail/${servicio.idServicio}") }
-//                            )
-//                        }
-//                    }
-//                }
-                item { SectionTitle("Servicios destacados en tu zona") }
-                item {
-                    val negociosUnicos = state.servicios
-                        .groupBy { it.idNegocio }   // Agrupa por idNegocio
-                        .map { it.value.first() }
 
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(negociosUnicos.take(3)) { servicio ->
-                        DealRowCard(
-                                servicio = servicio,
-//                                onClick = { navController?.navigate("businessDetail/${servicio.idServicio}") }
-                            onClick = { navController?.navigate("businessDetail/${servicio.idNegocio}") }
+                    item { SectionTitle("Servicios destacados en tu zona") }
+                    item {
+                        // Agrupación por idNegocio REAL (evita 0)
+                        val negociosUnicos = state.servicios
+                            .groupBy { it.idNegocio.takeIf { id -> id > 0 } ?: it.negocio.idNegocio }
+                            .map { (_, lista) -> lista.first() }
 
-                        )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(
+                                negociosUnicos.take(3),
+                                key = { it.idNegocio.takeIf { id -> id > 0 } ?: it.negocio.idNegocio }
+                            ) { servicio ->
+                                DealRowCard(
+                                    servicio = servicio,
+                                    onClick = {
+                                        val idDestino = (servicio.idNegocio.takeIf { id -> id > 0 }
+                                            ?: servicio.negocio.idNegocio)
+                                        if (idDestino > 0) {
+                                            navController?.navigate("businessDetail/$idDestino")
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
-                }
 
-                item { Spacer(Modifier.height(24.dp)) }
+                    item { Spacer(Modifier.height(24.dp)) }
+                }
             }
         }
     }
@@ -174,10 +181,7 @@ private fun HeaderGreeting(name: String, location: String) {
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
-    )
+    Text(text, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
 }
 
 @Composable
@@ -264,7 +268,7 @@ private fun SmallServiceCard(servicio: Servicio, onClick: () -> Unit = {}) {
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
-                    model = servicio.imagenUrl, // Aquí luego pones URL de imagen
+                    model = servicio.imagenUrl,
                     contentDescription = servicio.nombre,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -310,7 +314,6 @@ private fun SmallServiceCard(servicio: Servicio, onClick: () -> Unit = {}) {
     }
 }
 
-// NUEVAS FUNCIONES AÑADIDAS
 @Composable
 private fun FeaturedCard(servicio: Servicio, onClick: () -> Unit = {}) {
     val configuration = LocalConfiguration.current
@@ -359,9 +362,7 @@ private fun FeaturedCard(servicio: Servicio, onClick: () -> Unit = {}) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = servicio.nombre,
                             style = MaterialTheme.typography.labelSmall,
@@ -404,13 +405,10 @@ private fun DealRowCard(servicio: Servicio, onClick: () -> Unit = {}) {
     val spacing = 8.dp
     val cardWidth = (screenWidth - horizontalPadding - spacing) / 2
 
+    val primeraImagenNegocio = servicio.negocio.imagenes?.firstOrNull()?.urlImagen
+    val categoriaNombre = servicio.negocio.categoria?.nombre ?: "Sin categoría"
+    val imagenMostrar = primeraImagenNegocio ?: servicio.imagenUrl.orEmpty()
 
-    // ✅ Ahora estos datos están disponibles
-    val primeraImagenNegocio = servicio.negocio.imagenes.firstOrNull()?.urlImagen
-    val categoriaNombre = servicio.negocio.categoria.nombre
-
-    // Usar imagen del negocio (prioridad) o fallback a imagen del servicio
-    val imagenMostrar = primeraImagenNegocio ?: servicio.imagenUrl ?: ""
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
@@ -420,12 +418,12 @@ private fun DealRowCard(servicio: Servicio, onClick: () -> Unit = {}) {
         Column {
             Box {
                 AsyncImage(
-//                    model = "",
                     model = imagenMostrar,
                     contentDescription = servicio.nombre,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(130.dp)
+                        .height(130.dp),
+                    contentScale = ContentScale.Crop
                 )
             }
             Column(Modifier.padding(12.dp)) {
@@ -448,7 +446,7 @@ private fun DealRowCard(servicio: Servicio, onClick: () -> Unit = {}) {
                     ) {
                         Text(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            text = categoriaNombre, // ← CATEGORÍA REAL
+                            text = categoriaNombre,
                             style = MaterialTheme.typography.labelMedium
                         )
                     }
@@ -457,11 +455,4 @@ private fun DealRowCard(servicio: Servicio, onClick: () -> Unit = {}) {
             }
         }
     }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun HomeScreenPreview() {
-    val vm = ServicioViewModel()
-    HomeScreen(vm)
 }
