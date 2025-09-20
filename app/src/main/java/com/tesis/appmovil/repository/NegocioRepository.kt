@@ -1,8 +1,4 @@
-// NegocioRepository (ajustado)
 package com.tesis.appmovil.repository
-
-
-// NegocioRepository (ajustado con ApiResponse)
 
 import com.tesis.appmovil.data.remote.ApiResponse
 import com.tesis.appmovil.data.remote.ApiService
@@ -17,24 +13,33 @@ import retrofit2.Response
 class NegocioRepository(
     private val api: ApiService = RetrofitClient.api
 ) {
+    /** Lista de negocios con filtros opcionales (paginated) */
     suspend fun listar(
         idCategoria: Int? = null,
         idUbicacion: Int? = null,
-        q: String? = null
+        q: String? = null,
+        page: Int = 1,
+        limit: Int = 20
     ): List<Negocio> =
-        api.getNegocios(idCategoria, idUbicacion, q).bodyOrThrow().data
-            ?: emptyList()
+        api.getNegocios(idCategoria, idUbicacion, q, page, limit)
+            .bodyOrThrow()
+            .data?.items ?: emptyList()
 
+    /** Toma los primeros N (si quieres 1 para “abajo”) */
+    suspend fun listarDestacados(limit: Int = 1): List<Negocio> =
+        listar(page = 1, limit = limit)
+
+    /** Detalle (tu backend envía ApiResponse<Negocio>) */
     suspend fun obtener(id: Int): Negocio =
         api.getNegocio(id).bodyOrThrow().data
             ?: throw IllegalStateException("Negocio no encontrado")
 
-    // En NegocioRepository
+    /** Detalle “extendido” (DTO específico) */
     suspend fun obtenerDetalle(id: Int): NegocioResponse =
         api.getNegocioDetalle(id).bodyOrThrow().data
             ?: throw IllegalStateException("Negocio no encontrado")
 
-
+    /** CRUD básico */
     suspend fun crear(body: NegocioCreate): Negocio =
         api.createNegocio(body).bodyOrThrow().data
             ?: throw IllegalStateException("Error al crear negocio")
@@ -47,59 +52,10 @@ class NegocioRepository(
         val resp = api.deleteNegocio(id)
         if (!resp.isSuccessful) throw HttpException(resp)
     }
-//    suspend fun obtenerDetalle(id: Int): Negocio =
-//        api.getNegocio(id).bodyOrThrow().data
-//            ?: throw IllegalStateException("Negocio no encontrado")
-
-
 }
 
-/* Helper compartido */
+/* ==== Helper para desempaquetar ApiResponse<T> ==== */
 private fun <T> Response<ApiResponse<T>>.bodyOrThrow(): ApiResponse<T> {
-    if (isSuccessful) {
-        val b = body()
-        if (b != null) return b
-    }
+    if (isSuccessful) body()?.let { return it }
     throw HttpException(this)
 }
-
-//
-//import com.tesis.appmovil.data.remote.ApiService
-//import com.tesis.appmovil.data.remote.RetrofitClient
-//import com.tesis.appmovil.data.remote.dto.NegocioCreate
-//import com.tesis.appmovil.data.remote.dto.NegocioUpdate
-//import com.tesis.appmovil.models.Negocio
-//import retrofit2.HttpException
-//import retrofit2.Response
-//
-//class NegocioRepository(
-//    private val api: ApiService = RetrofitClient.api
-//) {
-//    suspend fun listar(
-//        idCategoria: Int? = null,
-//        idUbicacion: Int? = null,
-//        q: String? = null
-//    ): List<Negocio> = api.getNegocios(idCategoria, idUbicacion, q).bodyOrThrow()
-//
-//    suspend fun obtener(id: Int): Negocio = api.getNegocio(id).bodyOrThrow()
-//
-//    suspend fun crear(body: NegocioCreate): Negocio =
-//        api.createNegocio(body).bodyOrThrow()
-//
-//    suspend fun actualizar(id: Int, body: NegocioUpdate): Negocio =
-//        api.updateNegocio(id, body).bodyOrThrow()
-//
-//    suspend fun eliminar(id: Int) {
-//        val resp = api.deleteNegocio(id)
-//        if (!resp.isSuccessful) throw HttpException(resp)
-//    }
-//}
-//
-///* Helper compartido con los demás repos */
-//private fun <T> Response<T>.bodyOrThrow(): T {
-//    if (isSuccessful) {
-//        val b = body()
-//        if (b != null) return b
-//    }
-//    throw HttpException(this)
-//}

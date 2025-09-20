@@ -1,13 +1,16 @@
-//package com.tesis.appmovil.ui.home
+// app/src/main/java/com/tesis/appmovil/ui/home/BusinessDetailScreen.kt
 package com.tesis.appmovil.ui.home
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,8 +47,7 @@ fun BusinessDetailScreen(
             }
         }
         state.detalle != null -> {
-            val negocio = state.detalle!!
-            RenderBusinessDetail(negocio, onBack)
+            RenderBusinessDetail(state.detalle!!, onBack)
         }
         else -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -64,7 +66,7 @@ private fun RenderBusinessDetail(
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = { Text(negocio.nombre) },
+                title = { Text(negocio.nombre, style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Volver")
@@ -80,31 +82,29 @@ private fun RenderBusinessDetail(
                 .verticalScroll(rememberScrollState())
         ) {
             // Imagen destacada
-            val imagen = negocio.imagenes?.firstOrNull()?.urlImagen
+            val portada = negocio.imagenes?.firstOrNull()?.urlImagen
             AsyncImage(
-                model = imagen ?: "https://via.placeholder.com/600",
+                model = portada ?: "https://via.placeholder.com/900x400",
                 contentDescription = negocio.nombre,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp)
+                    .height(210.dp)
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Info básica
+            // Cabecera con nombre / categoría / desc corta
             Column(Modifier.padding(horizontal = 16.dp)) {
                 Text(
                     text = negocio.nombre,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                 )
                 Text(
-                    text = negocio.categoria.nombre,
+                    text = negocio.categoria?.nombre ?: "—",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
-
                 negocio.descripcion?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(it, style = MaterialTheme.typography.bodyMedium)
@@ -112,35 +112,42 @@ private fun RenderBusinessDetail(
 
                 Spacer(Modifier.height(12.dp))
 
-                // Ubicación
-                Text(
-                    text = "📍 ${negocio.direccion}, ${negocio.ubicacion?.distrito}, ${negocio.ubicacion?.ciudad}",
-                    style = MaterialTheme.typography.bodyMedium
+                // Contacto + dirección (con iconitos, como el mock)
+                InfoRow(
+                    icon = Icons.Filled.LocationOn,
+                    text = buildDireccion(
+                        negocio.direccion,
+                        negocio.ubicacion?.distrito,
+                        negocio.ubicacion?.ciudad
+                    )
                 )
-
-                // Contacto
                 negocio.telefono?.let {
-                    Text("☎ $it", style = MaterialTheme.typography.bodyMedium)
+                    InfoRow(icon = Icons.Filled.Phone, text = it)
                 }
                 negocio.correoContacto?.let {
-                    Text("✉ $it", style = MaterialTheme.typography.bodyMedium)
+                    InfoRow(icon = Icons.Filled.Email, text = it)
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // Servicios
+            // ====== Servicios ======
             Text(
                 text = "Servicios",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
+
             (negocio.servicios ?: emptyList()).forEach { servicio ->
-                Card(
+                ElevatedCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f)
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -149,65 +156,78 @@ private fun RenderBusinessDetail(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
-                            model = servicio.imagenUrl ?: "https://via.placeholder.com/80",
+                            model = servicio.imagenUrl ?: "https://via.placeholder.com/88",
                             contentDescription = servicio.nombre,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(70.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(10.dp))
                         )
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(servicio.nombre, fontWeight = FontWeight.Bold)
-                            Text("Duración: ${servicio.duracionMinutos} min")
+                            Text(
+                                servicio.nombre,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Duración: ${servicio.duracionMinutos} min",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        Text("S/ ${servicio.precio}", fontWeight = FontWeight.Bold)
+                        Text(
+                            "S/ ${servicio.precio}",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                        )
                     }
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // Horarios
+            // ====== Horarios (como en la pantalla de tu compañera) ======
             Text(
                 text = "Horarios",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
-            (negocio.horarios ?: emptyList()).forEach {
-                Text(
-                    "${it.diaSemana}: ${it.horaApertura} - ${it.horaCierre}",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
 
-            Spacer(Modifier.height(24.dp))
-
-            // Galería de imágenes adicionales
-            if ((negocio.imagenes?.size ?: 0) > 1) {
-                Text(
-                    text = "Galería",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    negocio.imagenes?.drop(1)?.forEach { img ->
-                        AsyncImage(
-                            model = img.urlImagen,
-                            contentDescription = img.descripcion ?: "",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                        )
-                    }
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                (negocio.horarios ?: emptyList()).forEach { h ->
+                    // Ej: "Lunes: 09:00:00 - 19:00:00"
+                    Text(
+                        text = "${h.diaSemana}: ${h.horaApertura} - ${h.horaCierre}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                    )
                 }
             }
+
+            Spacer(Modifier.height(28.dp))
         }
     }
+}
+
+@Composable
+private fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String?) {
+    if (text.isNullOrBlank()) return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 2.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+private fun buildDireccion(dir: String?, distrito: String?, ciudad: String?): String {
+    val partes = listOfNotNull(dir, distrito, ciudad)
+    return if (partes.isEmpty()) "Sin dirección" else partes.joinToString(", ")
 }

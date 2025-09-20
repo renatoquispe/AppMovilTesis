@@ -4,6 +4,7 @@ import com.tesis.appmovil.data.remote.request.GoogleLoginRequest
 import com.tesis.appmovil.data.remote.request.LoginRequest
 import com.tesis.appmovil.data.remote.request.LoginResponse
 import com.tesis.appmovil.data.remote.request.NegocioResponse
+import com.tesis.appmovil.data.remote.request.PagedResponse
 import com.tesis.appmovil.models.*
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -70,8 +71,14 @@ interface ApiService {
     suspend fun getNegocios(
         @Query("id_categoria") idCategoria: Int? = null,
         @Query("id_ubicacion") idUbicacion: Int? = null,
-        @Query("q") q: String? = null
-    ): Response<ApiResponse<List<Negocio>>>   // 👈 aquí va ApiResponse
+        @Query("q") q: String? = null,
+        @Query("page") page: Int? = 1,
+        @Query("limit") limit: Int? = 20
+    ): Response<ApiResponse<PagedResponse<Negocio>>>
+
+
+
+    // 👈 aquí va ApiResponse
 //    @GET("negocios")
 //    suspend fun getNegocios(
 //        @Query("id_categoria") idCategoria: Int? = null,

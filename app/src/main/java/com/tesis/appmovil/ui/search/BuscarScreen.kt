@@ -1,355 +1,242 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-
 package com.tesis.appmovil.ui.search
 
-import android.view.ViewGroup
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.FragmentContainerView
-import androidx.fragment.app.commit
-import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import com.tesis.appmovil.R
-import com.tesis.appmovil.viewmodel.SearchViewModel
-import com.tesis.appmovil.viewmodel.ServiceItem
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
+import com.tesis.appmovil.viewmodel.HomeNegocioViewModel
+import com.tesis.appmovil.viewmodel.ServicioViewModel
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
-/** Host del Fragment con Google Maps — prácticamente igual */
+// ---- Google Maps Compose ----
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+// -----------------------------
+
+/** Estados de la bandeja */
+private enum class SheetState { Expanded, Middle, Collapsed }
+
 @Composable
-fun BuscarFragmentHost(modifier: Modifier = Modifier) {
-    val activity = LocalContext.current as FragmentActivity
-    val fm = activity.supportFragmentManager
-    val tag = "buscar_fragment"
-    val stableId = R.id.search_fragment_container
+fun BuscarScreen(
+    vmNegocios: HomeNegocioViewModel,
+    vmServicios: ServicioViewModel,
+    onClickNegocio: (Int) -> Unit
+) {
+    val negociosState by vmNegocios.state.collectAsState()
+    val serviciosState by vmServicios.ui.collectAsState()
 
-    AndroidView(
-        modifier = modifier,
-        factory = { ctx ->
-            FragmentContainerView(ctx).apply {
-                id = stableId
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            }
-        },
-        update = { container ->
-            val existing = fm.findFragmentByTag(tag)
-            if (existing == null) {
-                fm.commit {
-                    setReorderingAllowed(true)
-                    add(container.id, BuscarFragment(), tag)
-                }
-                return@AndroidView
-            }
-            val isViewAttachedToThisContainer = existing.view?.parent == container
-            if (isViewAttachedToThisContainer) return@AndroidView
-            fm.commit {
-                setReorderingAllowed(true)
-                remove(existing)
-                add(container.id, BuscarFragment(), tag)
-            }
+    // Carga inicial
+    LaunchedEffect(Unit) {
+        if (!negociosState.isLoading && negociosState.negocios.isEmpty()) {
+            vmNegocios.cargarDestacados(limit = 10)
         }
-    )
-}
+        if (!serviciosState.isLoading && serviciosState.servicios.isEmpty()) {
+            vmServicios.cargarServicios()
+        }
+    }
 
-/** Pantalla principal mejorada (sencilla y estable) */
-@Composable
-fun BuscarScreen(vm: SearchViewModel = viewModel()) {
+    // Imagen por nombre de negocio (para tarjetas)
+    val imageByNombre by remember(serviciosState.servicios) {
+        mutableStateOf(
+            serviciosState.servicios
+                .groupBy { it.negocio.nombre }
+                .mapValues { (_, lista) ->
+                    lista.firstNotNullOfOrNull { it.negocio.imagenes?.firstOrNull()?.urlImagen }
+                        ?: lista.firstNotNullOfOrNull { it.imagenUrl }
+                        ?: ""
+                }
+        )
+    }
+
+    // --- MAPA: posición inicial ---
+    val lima = LatLng(-12.0464, -77.0428)
+    val firstWithCoords: LatLng? = remember(negociosState.negocios) {
+        negociosState.negocios
+            .firstOrNull { it.latitud != null && it.longitud != null }
+            ?.let { LatLng(it.latitud!!, it.longitud!!) }
+    }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(firstWithCoords ?: lima, 12f)
+    }
+
+    // --- SHEET: dimensiones/targets en PX ---
+    val density = LocalDensity.current
+    val conf = LocalConfiguration.current
+    val screenHdp = conf.screenHeightDp.dp
+    val screenHp = with(density) { screenHdp.toPx() }
+
+    val topPadding = with(density) { 68.dp.toPx() }     // margen visible arriba cuando está Expanded
+    val midY = screenHp * 0.45f                         // posición media
+    val collapsedY = screenHp * 0.78f                   // casi abajo para ver más mapa
+    val minY = topPadding
+    val maxY = collapsedY
+
+    var sheetState by remember { mutableStateOf(SheetState.Middle) }
+    val offsetY = remember { Animatable(midY) }
+    val scope = rememberCoroutineScope()
+
+    // Sincroniza animación cuando cambie el estado
+    LaunchedEffect(sheetState) {
+        val target = when (sheetState) {
+            SheetState.Expanded -> minY
+            SheetState.Middle   -> midY
+            SheetState.Collapsed-> maxY
+        }
+        offsetY.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow))
+    }
+
     Box(Modifier.fillMaxSize()) {
-        // 1) Mapa (fragment)
-        BuscarFragmentHost(Modifier.fillMaxSize())
 
-        // 2) Barra de búsqueda superior (sin el botón de 3 rayas)
-        TopSearchBar(
-            query = vm.state.query,
-            onQueryChange = vm::onQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .padding(top = 12.dp)
-                .zIndex(1f)
-                .align(Alignment.TopCenter)
-        )
-
-        // 3) Panel inferior con resultados
-        ResultsBottomSheet(
-            popular = vm.state.popular,
-            onClickService = { /* TODO abrir detalle */ },
-            onClickIA = { /* TODO IA */ },
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.55f)    // ajusta este valor para mover la sheet
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 6.dp, vertical = 8.dp)
-                .zIndex(0.9f)
-        )
-    }
-}
-
-/* ---------- TopSearchBar: sin menu y placeholder con color explícito ---------- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TopSearchBar(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Eliminado el botón de 3 rayas según pediste.
-
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp), // <- tamaño del texto de entrada
-            placeholder = {
-                Text(
-                    "Busque el mejor servicio aquí",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp // <- tamaño del placeholder (coincide con textStyle)
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    Icons.Outlined.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(24.dp),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent
+        // 1) Mapa a pantalla completa (la sheet va encima)
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(isMyLocationEnabled = false),
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = false,
+                myLocationButtonEnabled = false,
+                compassEnabled = false
             )
-        )
-    }
-}
-
-
-/* ---------- ResultsBottomSheet (idéntico a lo propuesto antes) ---------- */
-@Composable
-private fun ResultsBottomSheet(
-    popular: List<ServiceItem>,
-    onClickService: (ServiceItem) -> Unit,
-    onClickIA: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
-        color = Color.White,
-        tonalElevation = 12.dp
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // handle
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(64.dp)
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(Color(0x12000000))
-                )
-            }
-
-            Text(
-                text = "Servicios más buscados en tu zona",
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
-            )
-
-            if (popular.isNotEmpty()) {
-                LargeFeaturedCard(
-                    item = popular.first(),
-                    onClick = { onClickService(popular.first()) },
-                    onClickIA = onClickIA,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                )
-            }
-
-            androidx.compose.foundation.lazy.LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                contentPadding = PaddingValues(bottom = 18.dp)
-            ) {
-                items(if (popular.size > 1) popular.drop(1) else emptyList(), key = { it.id }) { item ->
-                    CompactRow(item = item, onClick = { onClickService(item) }, onClickIA = onClickIA)
-                }
-            }
-        }
-    }
-}
-
-/* ---------- Tarjetas: LargeFeaturedCard / CompactRow (rating eliminado) ---------- */
-
-@Composable
-private fun LargeFeaturedCard(
-    item: ServiceItem,
-    onClick: () -> Unit,
-    onClickIA: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp)
         ) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(
-                    model = item.imageUrl,
-                    contentDescription = item.name,
-                    modifier = Modifier
-                        .size(width = 140.dp, height = 96.dp)
-                        .clip(RoundedCornerShape(10.dp)),
-                    contentScale = ContentScale.Crop
-                )
-
-                Spacer(Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(item.name.uppercase(), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            // Marcadores por negocio (si tienen lat/lng)
+            negociosState.negocios.forEach { n ->
+                val lat = n.latitud
+                val lng = n.longitud
+                if (lat != null && lng != null) {
+                    Marker(
+                        state = MarkerState(position = LatLng(lat, lng)),
+                        title = n.nombre,
+                        snippet = n.direccion ?: ""
                     )
-
-                    Spacer(Modifier.height(6.dp))
-
-                    Text("${if (item.isOpenNow) "Abierto ahora" else "Cerrado"} · ${item.schedule}",
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Place, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(6.dp))
-                        Text("5 km", style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant))
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Row {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Corte/Haircut", style = MaterialTheme.typography.bodySmall)
-                            Spacer(Modifier.height(6.dp))
-                            Text("Corte + Ritual de barba", style = MaterialTheme.typography.bodySmall)
-                            Spacer(Modifier.height(6.dp))
-                            Text("Corte + lavado", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Column {
-                            Text(item.price1, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold))
-                            Spacer(Modifier.height(8.dp))
-                            Text(item.price2, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold))
-                            Spacer(Modifier.height(8.dp))
-                            Text("S/65", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold))
-                        }
-                    }
-
-                    Spacer(Modifier.height(6.dp))
-
-                    Text("Ver más", style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary))
                 }
             }
+        }
 
-            // --- RATING ELIMINADO: si en un futuro quieres volver a mostrar rating,
-            // puedes añadir una propiedad rating: Double? a ServiceItem y descomentar
-            // el bloque que mostraba la estrella y el valor. Por ahora lo quitamos.
+        // 2) Barra de búsqueda flotante
+        SearchBarOverlay(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 12.dp, start = 16.dp, end = 16.dp)
+        )
 
-            FloatingActionButton(
-                onClick = onClickIA,
-                containerColor = Color(0xFFEBDEFB),
-                contentColor = Color(0xFF4A2548),
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),
-                modifier = Modifier
-                    .size(46.dp)
-                    .align(Alignment.BottomEnd)
-                    .offset(x = (-10).dp, y = (-10).dp),
-                shape = CircleShape
-            ) {
-                Text("IA", fontWeight = FontWeight.SemiBold)
+        // 3) Bandeja deslizable con la lista
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(0, offsetY.value.roundToInt()) }
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onVerticalDrag = { _, dragAmount ->
+                            val newY = (offsetY.value + dragAmount).coerceIn(minY, maxY)
+                            scope.launch { offsetY.snapTo(newY) }
+                        },
+                        onDragEnd = {
+                            val y = offsetY.value
+                            sheetState = when {
+                                y < (minY + midY) / 2f -> SheetState.Expanded
+                                y < (midY + maxY) / 2f -> SheetState.Middle
+                                else                   -> SheetState.Collapsed
+                            }
+                        }
+                    )
+                },
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp,
+            shadowElevation = 8.dp
+        ) {
+            when {
+                negociosState.isLoading -> {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(220.dp),
+                        contentAlignment = Alignment.Center
+                    ) { CircularProgressIndicator() }
+                }
+                negociosState.error != null -> {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(220.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Error: ${negociosState.error}", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                else -> {
+                    Column(Modifier.fillMaxSize()) {
+                        Spacer(Modifier.height(12.dp))
+                        MasBuscadosSection(
+                            title = "Servicios más buscados en tu zona",
+                            negocios = negociosState.negocios,
+                            imageByNombre = imageByNombre,
+                            onClick = { negocio ->
+                                // Resuelve id de navegación usando servicios
+                                val idDestino = serviciosState.servicios.firstNotNullOfOrNull { s ->
+                                    if (s.negocio.nombre == negocio.nombre)
+                                        s.idNegocio.takeIf { it > 0 } ?: s.negocio.idNegocio
+                                    else null
+                                } ?: 0
+                                if (idDestino > 0) onClickNegocio(idDestino)
+                            }
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun CompactRow(item: ServiceItem, onClick: () -> Unit, onClickIA: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(10.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+private fun SearchBarOverlay(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 6.dp,
+        shadowElevation = 10.dp
     ) {
-        Row(modifier = Modifier
-            .fillMaxWidth()
-            .padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-
-            AsyncImage(
-                model = item.imageUrl,
-                contentDescription = item.name,
-                modifier = Modifier
-                    .size(74.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
+        Row(
+            modifier = Modifier
+                .height(52.dp)
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Outlined.Menu, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "Busque el mejor servicio aquí",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(4.dp))
-                Text("${if (item.isOpenNow) "Abierto" else "Cerrado"} · ${item.schedule}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(6.dp))
-                Text(item.price1, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold))
-            }
-
-            Surface(
-                onClick = onClickIA,
-                shape = CircleShape,
-                color = Color(0xFFEBDEFB),
-                tonalElevation = 6.dp,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text("IA", color = Color(0xFF4A2548), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
+            Icon(Icons.Outlined.Search, contentDescription = null)
         }
     }
 }
