@@ -45,6 +45,7 @@ import com.tesis.appmovil.ui.home.BusinessDetailScreen
 import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.ui.search.BuscarScreen     // <- usa la pantalla con controles
 import com.tesis.appmovil.viewmodel.AuthViewModel
+import com.tesis.appmovil.viewmodel.HomeNegocioViewModel
 import com.tesis.appmovil.viewmodel.HomeViewModel
 import com.tesis.appmovil.viewmodel.NegocioViewModel
 import com.tesis.appmovil.viewmodel.ServicioViewModel
@@ -180,23 +181,20 @@ fun MainWithBottomBar() {
                 val vm: ServicioViewModel = viewModel()
                 HomeScreen(vm, innerNav)   // 👈 sigue recibiendo innerNav
             }
-            // SEARCH
-//            composable(Dest.Search.route) {
-//                BuscarScreen()
-//            }
+
             // SEARCH (pasa los parámetros requeridos)
-            //RENATO
-//            composable(Dest.Search.route) {
-//                val vmNegocios: HomeNegocioViewModel = viewModel()
-//                val vmServicios: ServicioViewModel = viewModel()
-//                BuscarScreen(
-//                    vmNegocios = vmNegocios,
-//                    vmServicios = vmServicios,
-//                    onClickNegocio = { id ->
-//                        if (id > 0) innerNav.navigate("businessDetail/$id")
-//                    }
-//                )
-//            }
+//            RENATO
+            composable(Dest.Search.route) {
+                val vmNegocios: HomeNegocioViewModel = viewModel()
+                val vmServicios: ServicioViewModel = viewModel()
+                BuscarScreen(
+                    vmNegocios = vmNegocios,
+                    vmServicios = vmServicios,
+                    onClickNegocio = { id ->
+                        if (id > 0) innerNav.navigate("businessDetail/$id")
+                    }
+                )
+            }
 
 
             // BUSINESS DETAIL
