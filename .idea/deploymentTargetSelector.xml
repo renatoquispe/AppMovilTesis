@@ -4,11 +4,11 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-09-17T02:52:06.816809500Z">
+        <DropdownSelection timestamp="2025-09-19T20:21:00.775277500Z">
           <Target type="DEFAULT_BOOT">
-            <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=R5CW41ZLESL" />
-            </handle>
+            <template>
+              <DeviceId pluginId="FirebaseDirectAccess" type="TEMPLATE" identifier="model_id=xcover7/34" />
+            </template>
           </Target>
         </DropdownSelection>
         <DialogSelection />
