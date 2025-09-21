@@ -47,6 +47,7 @@ import com.tesis.appmovil.ui.business.BusinessScheduleScreen
 import com.tesis.appmovil.ui.home.BusinessDetailScreen
 import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.ui.search.BuscarScreen     // <- usa la pantalla con controles
+import com.tesis.appmovil.ui.servicios.EditServiceScreen
 import com.tesis.appmovil.viewmodel.AuthViewModel
 import com.tesis.appmovil.viewmodel.HomeNegocioViewModel
 import com.tesis.appmovil.viewmodel.HomeViewModel
@@ -334,7 +335,24 @@ fun MainWithBottomBar() {
                 )
             }
 
+            composable(
+                route = "businessDetail/{idNegocio}",
+                arguments = listOf(navArgument("idNegocio") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val idNegocio = backStackEntry.arguments?.getInt("idNegocio") ?: 0
+                val vm: NegocioViewModel = viewModel()
+                BusinessDetailScreen(idNegocio = idNegocio, vm = vm, onBack = { innerNav.popBackStack() })
+            }
 
+            // AÑADE AQUÍ la nueva ruta para editar servicio:
+            composable(
+                route = "editService/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val id = backStackEntry.arguments?.getInt("id") ?: 0
+                val vm: ServicioViewModel = viewModel()
+                EditServiceScreen(servicioId = id, vm = vm, navController = innerNav)
+            }
 
 
         }

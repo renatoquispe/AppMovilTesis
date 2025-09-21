@@ -76,7 +76,6 @@ class NegocioViewModel(
         }
     }
 
-
 //    fun obtenerNegocio(id: Int) {
 //        viewModelScope.launch {
 //            runCatching { repo.obtener(id) }
