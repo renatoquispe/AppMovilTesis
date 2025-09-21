@@ -40,6 +40,7 @@ import com.tesis.appmovil.ui.auth.ChooseRoleScreen
 import com.tesis.appmovil.ui.auth.LoginScreen
 import com.tesis.appmovil.ui.auth.RegisterScreen
 import com.tesis.appmovil.ui.business.BusinessContactInfoScreen
+import com.tesis.appmovil.ui.business.BusinessDocumentsScreen
 import com.tesis.appmovil.ui.business.BusinessImagesScreen
 import com.tesis.appmovil.ui.business.BusinessLocationScreen
 import com.tesis.appmovil.ui.business.BusinessScheduleScreen
@@ -69,6 +70,7 @@ sealed class Dest(
     object BusinessImages : Dest("businessImages")
     object BusinessLocation : Dest("businessLocation")
 
+    object BusinessDocuments : Dest("businessDocuments")
 
 
 
@@ -80,6 +82,7 @@ sealed class Dest(
     object Search : Dest("search", "Buscar", Icons.Outlined.Search)
 //    object Account : Dest("account", "Cuenta", Icons.Outlined.AccountCircle)
     object Business : Dest("business", "Negocio", Icons.Default.Store)
+
 
 }
 
@@ -124,10 +127,12 @@ fun MainWithBottomBar() {
         Dest.Login.route,
         Dest.Register.route,
         Dest.RegisterBusiness.route,
+        Dest.BusinessContact.route,
         Dest.Business.route,
         Dest.BusinessSchedule.route,
         Dest.BusinessImages.route,
-        Dest.BusinessLocation.route
+        Dest.BusinessLocation.route,
+        Dest.BusinessDocuments.route
 
     )
     val showBottomBar = current !in hideBottomBarRoutes
@@ -292,10 +297,25 @@ fun MainWithBottomBar() {
                         // Aquí guardas la ubicación seleccionada
                         println("📍 Ubicación guardada: $latLng")
                         // Puedes navegar a la siguiente pantalla o volver atrás
-                        innerNav.popBackStack()
+                        innerNav.navigate(Dest.BusinessDocuments.route)
                     },
                     onBack = {
                         innerNav.popBackStack() // vuelve a la pantalla anterior
+                    }
+                )
+            }
+            composable(Dest.BusinessDocuments.route) {
+                BusinessDocumentsScreen(
+                    onContinue = {
+                        // Cuando se suben documentos y se hace click en continuar
+//                        innerNav.navigate(Dest.NextScreen.route) // o la pantalla que corresponda
+                    },
+                    onSkip = {
+                        // Cuando se omite la subida de documentos
+//                        innerNav.navigate(Dest.NextScreen.route) // o la pantalla que corresponda
+                    },
+                    onBack = {
+                        innerNav.popBackStack()
                     }
                 )
             }
