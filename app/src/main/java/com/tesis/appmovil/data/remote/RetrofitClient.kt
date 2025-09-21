@@ -10,11 +10,9 @@ import java.util.concurrent.TimeUnit
 
 
 object RetrofitClient {
-<<<<<<< HEAD
-    private const val BASE_URL = "https://gentle-spiders-hope.loca.lt/api/"
-=======
+
     private const val BASE_URL = "https://eighty-comics-grab.loca.lt/api/"
->>>>>>> 83cdf9e46875d18d03d94e78070569e1cc777842
+
 
     private var tokenProvider: (() -> String?)? = null
 
