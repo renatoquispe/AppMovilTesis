@@ -40,6 +40,8 @@ import com.tesis.appmovil.ui.auth.ChooseRoleScreen
 import com.tesis.appmovil.ui.auth.LoginScreen
 import com.tesis.appmovil.ui.auth.RegisterScreen
 import com.tesis.appmovil.ui.business.BusinessContactInfoScreen
+import com.tesis.appmovil.ui.business.BusinessImagesScreen
+import com.tesis.appmovil.ui.business.BusinessLocationScreen
 import com.tesis.appmovil.ui.business.BusinessScheduleScreen
 import com.tesis.appmovil.ui.home.BusinessDetailScreen
 import com.tesis.appmovil.ui.home.HomeScreen
@@ -63,6 +65,12 @@ sealed class Dest(
     object ChooseRole : Dest("chooseRole")
     object BusinessContact : Dest("businessContact")
     object BusinessSchedule : Dest("businessSchedule")
+
+
+    object BusinessImages : Dest("businessImages")
+    object BusinessLocation : Dest("businessLocation")
+
+
 
 
     object RegisterBusiness : Dest("registerBusiness")
@@ -118,7 +126,10 @@ fun MainWithBottomBar() {
         Dest.Register.route,
         Dest.RegisterBusiness.route,
         Dest.Business.route,
-        Dest.BusinessSchedule.route
+        Dest.BusinessSchedule.route,
+        Dest.BusinessImages.route,
+        Dest.BusinessLocation.route
+
     )
     val showBottomBar = current !in hideBottomBarRoutes
     // Rutas donde sí queremos mostrar el botón de cerrar
@@ -257,18 +268,38 @@ fun MainWithBottomBar() {
             composable(Dest.BusinessSchedule.route) {
                 BusinessScheduleScreen(
                     onContinue = {
-                        innerNav.popBackStack()
-                        // Cuando termine los horarios → vuelve al Home
-//                        innerNav.navigate(Dest.Home.route) {
-//                            popUpTo(Dest.Home.route) { inclusive = true }
-//                        }
+                        innerNav.navigate(Dest.BusinessImages.route)
                     },
                     onBack = {
                         innerNav.popBackStack() // vuelve a la pantalla anterior (BusinessContact)
                     }
                 )
             }
+            composable(Dest.BusinessImages.route) {
+                BusinessImagesScreen(
+                    onContinue = {
+                        innerNav.navigate(Dest.BusinessLocation.route)
 
+                    },
+                    onBack = {
+                        innerNav.popBackStack() // vuelve a la pantalla anterior (BusinessSchedule)
+                    }
+                )
+            }
+
+            composable(Dest.BusinessLocation.route) {
+                BusinessLocationScreen(
+                    onLocationSelected = { latLng ->
+                        // Aquí guardas la ubicación seleccionada
+                        println("📍 Ubicación guardada: $latLng")
+                        // Puedes navegar a la siguiente pantalla o volver atrás
+                        innerNav.popBackStack()
+                    },
+                    onBack = {
+                        innerNav.popBackStack() // vuelve a la pantalla anterior
+                    }
+                )
+            }
 
             composable(Dest.Register.route) {
                 val vm: AuthViewModel = viewModel()

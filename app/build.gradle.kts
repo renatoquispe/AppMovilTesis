@@ -45,6 +45,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.maps.android:maps-compose:4.4.1")
+
     // ---------------------------------------------------
 
     implementation("com.google.android.material:material:1.12.0")
@@ -69,6 +70,8 @@ dependencies {
     // Coil (una sola versión)
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+
+
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.0")
     implementation("com.google.android.gms:play-services-auth:21.1.1")
 
@@ -78,4 +81,12 @@ dependencies {
     // (opcionales)
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.4.0")
+
+    // Para permisos (Accompanist)
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+    // Para cargar imágenes
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // Para la selección de imágenes
+    implementation("androidx.activity:activity-compose:1.9.2")
 }
