@@ -84,6 +84,9 @@ sealed class Dest(
 //    object Account : Dest("account", "Cuenta", Icons.Outlined.AccountCircle)
     object Business : Dest("business", "Negocio", Icons.Default.Store)
 
+    object BusinessReady : Dest("register/ready")
+
+
 
 }
 
@@ -133,7 +136,8 @@ fun MainWithBottomBar() {
         Dest.BusinessSchedule.route,
         Dest.BusinessImages.route,
         Dest.BusinessLocation.route,
-        Dest.BusinessDocuments.route
+        Dest.BusinessDocuments.route,
+        Dest.BusinessReady.route
 
     )
     val showBottomBar = current !in hideBottomBarRoutes
@@ -309,14 +313,29 @@ fun MainWithBottomBar() {
                 BusinessDocumentsScreen(
                     onContinue = {
                         // Cuando se suben documentos y se hace click en continuar
-//                        innerNav.navigate(Dest.NextScreen.route) // o la pantalla que corresponda
+                        innerNav.navigate(Dest.BusinessReady.route)
                     },
                     onSkip = {
                         // Cuando se omite la subida de documentos
-//                        innerNav.navigate(Dest.NextScreen.route) // o la pantalla que corresponda
+                        innerNav.navigate(Dest.BusinessReady.route)
                     },
                     onBack = {
                         innerNav.popBackStack()
+                    }
+                )
+            }
+
+            composable(Dest.BusinessReady.route) {
+                com.tesis.appmovil.ui.business.BusinessReadyScreen(
+                    onPublish = {
+                        // Si necesitas, aquí llamas a tu ViewModel para publicar
+                        // viewModel.publishBusiness()
+
+                        // Luego manda al Home dentro del mismo NavHost interno
+                        innerNav.navigate(Dest.Home.route) {
+                            popUpTo(Dest.Home.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
