@@ -21,7 +21,15 @@ import com.tesis.appmovil.models.UserRole
 import com.tesis.appmovil.ui.auth.ChooseRoleScreen
 import com.tesis.appmovil.ui.auth.LoginScreen
 import com.tesis.appmovil.ui.auth.RegisterScreen
+
 import com.tesis.appmovil.ui.business.*
+
+import com.tesis.appmovil.ui.business.BusinessContactInfoScreen
+import com.tesis.appmovil.ui.business.BusinessDocumentsScreen
+import com.tesis.appmovil.ui.business.BusinessImagesScreen
+import com.tesis.appmovil.ui.business.BusinessLocationScreen
+import com.tesis.appmovil.ui.business.BusinessScheduleScreen
+
 import com.tesis.appmovil.ui.home.BusinessDetailScreen
 import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.ui.search.BuscarScreen
@@ -46,10 +54,18 @@ sealed class Dest(
     object BusinessImages   : Dest("businessImages")
     object BusinessLocation : Dest("businessLocation")
 
-    // flujo principal con bottom bar
+
+    object BusinessDocuments : Dest("businessDocuments")
+
+
     object Home     : Dest("home",     "Inicio", Icons.Outlined.Home)
     object Search   : Dest("search",   "Buscar", Icons.Outlined.Search)
     object Business : Dest("business", "Negocio", Icons.Default.Store)
+
+
+    object BusinessReady : Dest("register/ready")
+
+
 }
 
 @Composable
@@ -104,12 +120,23 @@ fun MainWithBottomBar() {
         Dest.Register.route,
         Dest.RegisterBusiness.route,
         Dest.BusinessContact.route,
+
         Dest.BusinessSchedule.route,
         Dest.BusinessImages.route,
         Dest.BusinessLocation.route,
+        Dest.Business.route,
+        Dest.BusinessSchedule.route,
+        Dest.BusinessImages.route,
+        Dest.BusinessLocation.route,
+        Dest.BusinessDocuments.route,
+        Dest.BusinessReady.route,
         "createService/{negocioId}",
         "editService/{idServicio}",
         "servicios/{negocioId}"
+
+
+
+
     )
     val showBottomBar = current !in hideBottomBarRoutes
 
@@ -267,10 +294,40 @@ fun MainWithBottomBar() {
                         // Aquí guardas la ubicación seleccionada
                         println("📍 Ubicación guardada: $latLng")
                         // Puedes navegar a la siguiente pantalla o volver atrás
-                        innerNav.popBackStack()
+                        innerNav.navigate(Dest.BusinessDocuments.route)
                     },
                     onBack = {
                         innerNav.popBackStack() // vuelve a la pantalla anterior
+                    }
+                )
+            }
+            composable(Dest.BusinessDocuments.route) {
+                BusinessDocumentsScreen(
+                    onContinue = {
+                        // Cuando se suben documentos y se hace click en continuar
+                        innerNav.navigate(Dest.BusinessReady.route)
+                    },
+                    onSkip = {
+                        // Cuando se omite la subida de documentos
+                        innerNav.navigate(Dest.BusinessReady.route)
+                    },
+                    onBack = {
+                        innerNav.popBackStack()
+                    }
+                )
+            }
+
+            composable(Dest.BusinessReady.route) {
+                com.tesis.appmovil.ui.business.BusinessReadyScreen(
+                    onPublish = {
+                        // Si necesitas, aquí llamas a tu ViewModel para publicar
+                        // viewModel.publishBusiness()
+
+                        // Luego manda al Home dentro del mismo NavHost interno
+                        innerNav.navigate(Dest.Home.route) {
+                            popUpTo(Dest.Home.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
