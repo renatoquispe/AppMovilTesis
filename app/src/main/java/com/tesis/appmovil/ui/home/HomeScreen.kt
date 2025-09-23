@@ -1,6 +1,11 @@
 package com.tesis.appmovil.ui.home
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
+import android.location.Geocoder
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,10 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,13 +31,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.text.isDigitsOnly
 import coil.compose.AsyncImage
 import androidx.navigation.NavController
 import com.tesis.appmovil.ChatActivity
 import com.tesis.appmovil.models.Servicio
 import com.tesis.appmovil.viewmodel.ServicioViewModel
 
-// Lottie 👇
+// Lottie (FAB animado)
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
@@ -43,16 +46,47 @@ import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.tesis.appmovil.R
 
+// Ubicación
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.Locale
+
 @Composable
 fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
     val state by vm.ui.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) { vm.cargarServicios() }
+    // Etiqueta que se muestra en el chip de ubicación
+    var locationLabel by remember { mutableStateOf("Lima, Perú") }
+
+    // Pide permiso y, si lo obtiene, resuelve distrito/ciudad
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            scope.launch {
+                val coords = getCurrentOrLastLocation(context)
+                if (coords != null) {
+                    locationLabel = reverseGeocodeName(context, coords.first, coords.second)
+                }
+            }
+        }
+    }
+
+    // Pide servicios y ubicación al entrar
+    LaunchedEffect(Unit) {
+        vm.cargarServicios()
+        permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
 
     Scaffold(
         floatingActionButton = {
-            // FAB SOLO CON LA ANIMACIÓN (sin texto)
             FloatingActionButton(
                 onClick = {
                     navController?.navigate("chatbot")
@@ -71,7 +105,6 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                     composition = comp,
                     iterations = LottieConstants.IterateForever
                 )
-                // Aumenta/reduce el tamaño aquí si quieres (64.dp recomendado)
                 LottieAnimation(
                     composition = comp,
                     progress = { progress },
@@ -97,22 +130,29 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
+                        .statusBarsPadding()               // más aire respecto a la barra de estado
                         .padding(horizontal = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(top = 6.dp) // un pelín más de espacio arriba
                 ) {
-                    item { HeaderGreeting(name = "Invitado", location = "Lima, Perú") }
+                    item {
+                        HeaderGreeting(
+                            name = "Invitado",
+                            location = locationLabel,
+                            onLocationClick = {
+                                // Refresca tocando el chip
+                                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                            }
+                        )
+                    }
 
                     item { SectionTitle("Servicios disponibles") }
                     item {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(
-                                state.servicios,
-                                key = { it.idServicio } // clave estable por servicio
-                            ) { servicio ->
+                            items(state.servicios, key = { it.idServicio }) { servicio ->
                                 SmallServiceCard(
                                     servicio = servicio,
                                     onClick = {
-                                        // Navegación SEGURA
                                         val idDestino = (servicio.idNegocio.takeIf { id -> id > 0 }
                                             ?: servicio.negocio.idNegocio)
                                         if (idDestino > 0) {
@@ -127,10 +167,7 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                     item { SectionTitle("Estilos cerca de ti") }
                     item {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(
-                                state.servicios.take(4),
-                                key = { it.idServicio }
-                            ) { servicio ->
+                            items(state.servicios.take(4), key = { it.idServicio }) { servicio ->
                                 FeaturedCard(
                                     servicio = servicio,
                                     onClick = {
@@ -147,7 +184,6 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
 
                     item { SectionTitle("Servicios destacados en tu zona") }
                     item {
-                        // Agrupación por idNegocio REAL (evita 0)
                         val negociosUnicos = state.servicios
                             .groupBy { it.idNegocio.takeIf { id -> id > 0 } ?: it.negocio.idNegocio }
                             .map { (_, lista) -> lista.first() }
@@ -179,27 +215,45 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
 }
 
 @Composable
-private fun HeaderGreeting(name: String, location: String) {
-    Column(Modifier.fillMaxWidth()) {
-        Spacer(Modifier.height(2.dp))
+private fun HeaderGreeting(
+    name: String,
+    location: String,
+    onLocationClick: () -> Unit
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp) // separa título + chip del borde superior
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // TÍTULO MÁS CHICO
             Text(
                 text = "¿Qué harás hoy?",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                fontSize = 20.sp, // antes headlineSmall, ahora más pequeño
+                fontWeight = FontWeight.Bold
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(RoundedCornerShape(24.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .clickable { onLocationClick() }
+                    .padding(horizontal = 12.dp, vertical = 8.dp) // chip un poco más alto
+                    .heightIn(min = 40.dp)                       // ↑ alto mínimo
+                    .widthIn(max = 260.dp)                        // controla ancho máximo
             ) {
-                Spacer(Modifier.width(4.dp))
-                Text(location, style = MaterialTheme.typography.labelSmall)
+                // texto de ubicación con ellipsis si es muy largo (ej. “Urb la Perla Alta, La Perla”)
+                Text(
+                    location,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
                 Icon(Icons.Outlined.LocationOn, contentDescription = null)
             }
         }
@@ -482,4 +536,37 @@ private fun DealRowCard(servicio: Servicio, onClick: () -> Unit = {}) {
             }
         }
     }
+}
+
+/* ------------------ Helpers de ubicación ------------------ */
+
+@SuppressLint("MissingPermission")
+suspend fun getCurrentOrLastLocation(context: android.content.Context): Pair<Double, Double>? = try {
+    val client = LocationServices.getFusedLocationProviderClient(context)
+    val cts = CancellationTokenSource()
+    val current = client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token).await()
+    if (current != null) Pair(current.latitude, current.longitude)
+    else client.lastLocation.await()?.let { Pair(it.latitude, it.longitude) }
+} catch (_: Exception) { null }
+
+/** Devuelve distrito / ciudad legible desde lat/lng. */
+suspend fun reverseGeocodeName(
+    context: android.content.Context,
+    lat: Double,
+    lng: Double
+): String = withContext(Dispatchers.IO) {
+    runCatching {
+        val geocoder = Geocoder(context, Locale.getDefault())
+        val list = geocoder.getFromLocation(lat, lng, 1)
+        val addr = list?.firstOrNull()
+        val district = addr?.subLocality
+        val city = addr?.locality ?: addr?.subAdminArea
+        val country = addr?.countryName
+        when {
+            !district.isNullOrBlank() && !city.isNullOrBlank() -> "$district, $city"
+            !city.isNullOrBlank() -> city
+            !country.isNullOrBlank() -> country
+            else -> "Ubicación actual"
+        }
+    }.getOrDefault("Ubicación actual")
 }
