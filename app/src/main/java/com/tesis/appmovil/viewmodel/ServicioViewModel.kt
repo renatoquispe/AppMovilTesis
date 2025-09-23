@@ -1,4 +1,4 @@
-// ServicioViewModel.kt
+// app/src/main/java/com/tesis/appmovil/viewmodel/ServicioViewModel.kt
 package com.tesis.appmovil.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -7,37 +7,20 @@ import com.tesis.appmovil.models.Servicio
 import com.tesis.appmovil.repository.ServicioRepository
 import com.tesis.appmovil.data.remote.dto.ServicioCreate
 import com.tesis.appmovil.data.remote.dto.ServicioUpdate
-import com.tesis.appmovil.data.remote.request.NegocioResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.MultipartBody
 
-//data class ServicioUiState(
-//    val isLoading: Boolean = false,
-//    val mutando: Boolean = false,
-//    val servicios: List<Servicio> = emptyList(),
-//    val seleccionado: Servicio? = null,
-//    val error: String? = null,
-//    val negociosDestacados: List<Servicio> = emptyList(),
-//
-//    // Añade estos estados para el detalle
-//    // Estados para el detalle
-//    val isLoadingDetalle: Boolean = false,
-////    val negocioDetalle: NegocioResponse? = null,
-////    val isLoadingDetalle: Boolean = false,
-//    val errorDetalle: String? = null
-//)
 data class ServicioUiState(
-    val isLoading: Boolean = false,
-    val mutando: Boolean = false,
+    val isLoading: Boolean = false,          // carga de listas
+    val mutando: Boolean = false,            // creando/actualizando/eliminando
     val servicios: List<Servicio> = emptyList(),
-    val seleccionado: Servicio? = null,
-    val error: String? = null,
-    val negociosDestacados: List<Servicio> = emptyList(),
-    // SOLO estos estados para el detalle
-    val isLoadingDetalle: Boolean = false,
-    val errorDetalle: String? = null
+    val seleccionado: Servicio? = null,      // detalle actual
+    val error: String? = null,               // error general
+    val cargando: Boolean = false            // carga del DETALLE (lo usa EditServiceScreen)
 )
 
 class ServicioViewModel(
@@ -45,142 +28,127 @@ class ServicioViewModel(
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(ServicioUiState())
-    val ui: StateFlow<ServicioUiState> = _ui
+    val ui: StateFlow<ServicioUiState> = _ui.asStateFlow()
 
-    fun obtenerNegocioDesdeServicios(idServicio: Int): NegocioResponse? {
-        return _ui.value.servicios.find { it.idServicio == idServicio }?.negocio
+    /** Listado (opcional por negocio) */
+    fun cargarServicios(idNegocio: Int? = null) = viewModelScope.launch {
+        _ui.update { it.copy(isLoading = true, error = null) }
+        runCatching { repo.listar(idNegocio) }
+            .onSuccess { lista ->
+                _ui.update { it.copy(isLoading = false, servicios = lista) }
+            }
+            .onFailure { e ->
+                _ui.update { it.copy(isLoading = false, error = e.message ?: "Error al cargar servicios") }
+            }
     }
 
-    fun obtenerServicio(id: Int) {
-        viewModelScope.launch {
-            _ui.update { it.copy(isLoadingDetalle = true, errorDetalle = null) }
-
-            runCatching { repo.obtener(id) }
-                .onSuccess { servicio ->
-                    _ui.update {
-                        it.copy(
-                            isLoadingDetalle = false,
-                            seleccionado = servicio,
-                            errorDetalle = null
-                        )
-                    }
-                }
-                .onFailure { e ->
-                    _ui.update {
-                        it.copy(
-                            isLoadingDetalle = false,
-                            errorDetalle = e.message ?: "No se pudo obtener el servicio"
-                        )
-                    }
-                }
-        }
-    }
-
-    fun obtenerServiciosDeNegocio(idNegocio: Int): List<Servicio> {
-        return _ui.value.servicios.filter { it.negocio.idNegocio == idNegocio }
-    }
-
-    fun cargarDetalleNegocio(idNegocio: Int) {
-        viewModelScope.launch {
-            _ui.update { it.copy(isLoadingDetalle = true, errorDetalle = null) }
-            try {
-                // Buscar el negocio en los servicios ya cargados
-                val negocio = _ui.value.servicios
-                    .firstOrNull { it.negocio.idNegocio == idNegocio }
-                    ?.negocio
-
-                _ui.update {
-                    it.copy(
-                        isLoadingDetalle = false,
-                        errorDetalle = if (negocio == null) "Negocio no encontrado" else null
-                        // No necesitamos almacenar negocioDetalle por separado
-                    )
-                }
-            } catch (e: Exception) {
-                _ui.update {
-                    it.copy(
-                        isLoadingDetalle = false,
-                        errorDetalle = e.message ?: "Error al cargar detalle"
+    /** Crear (con o sin imagen Multipart ya preparada) */
+    fun crearYSubirImagen(dto: ServicioCreate, imagenPart: MultipartBody.Part? = null) = viewModelScope.launch {
+        _ui.update { it.copy(mutando = true, error = null) }
+        runCatching { repo.crearConImagen(dto, imagenPart) }
+            .onSuccess { creado ->
+                _ui.update { current ->
+                    current.copy(
+                        mutando = false,
+                        servicios = replaceServicio(current.servicios, creado),
+                        seleccionado = creado
                     )
                 }
             }
+            .onFailure { e ->
+                _ui.update { it.copy(mutando = false, error = e.message ?: "Error al crear servicio") }
+            }
+    }
+
+    /** Obtener detalle → la pantalla Edit usa ui.cargando */
+    fun obtenerServicio(id: Int) = viewModelScope.launch {
+        _ui.update { it.copy(cargando = true, error = null) }
+        runCatching { repo.obtener(id) }
+            .onSuccess { s ->
+                _ui.update { it.copy(cargando = false, seleccionado = s) }
+            }
+            .onFailure { e ->
+                _ui.update { it.copy(cargando = false, error = e.message ?: "Error al cargar detalle") }
+            }
+    }
+
+    /**
+     * Actualizar (incluye imagenUrl=null para eliminar imagen)
+     * Ahora admite callbacks para navegar/avisar en la UI justo al finalizar.
+     */
+    fun actualizarServicio(
+        id: Int,
+        body: ServicioUpdate,
+        onSuccess: (Servicio) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) = viewModelScope.launch {
+        _ui.update { it.copy(mutando = true, error = null) }
+        runCatching { repo.actualizar(id, body) }
+            .onSuccess { actualizado ->
+                _ui.update { current ->
+                    current.copy(
+                        mutando = false,
+                        servicios = replaceServicio(current.servicios, actualizado),
+                        seleccionado = actualizado
+                    )
+                }
+                onSuccess(actualizado) // dispara la navegación/feedback desde la UI
+            }
+            .onFailure { e ->
+                val msg = e.message ?: "Error al actualizar"
+                _ui.update { it.copy(mutando = false, error = msg) }
+                onError(msg) // permite mostrar error en pantalla
+            }
+    }
+
+    /** Eliminar servicio */
+    fun eliminarServicio(id: Int) = viewModelScope.launch {
+        _ui.update { it.copy(mutando = true, error = null) }
+        runCatching { repo.eliminar(id) }
+            .onSuccess {
+                _ui.update { current ->
+                    current.copy(
+                        mutando = false,
+                        servicios = current.servicios.filterNot { it.idServicio == id },
+                        seleccionado = if (current.seleccionado?.idServicio == id) null else current.seleccionado
+                    )
+                }
+            }
+            .onFailure { e ->
+                _ui.update { it.copy(mutando = false, error = e.message ?: "Error al eliminar") }
+            }
+    }
+
+    /** Subir imagen (Multipart) y refrescar el detalle */
+    fun subirImagenServicio(idServicio: Int, imagenPart: MultipartBody.Part) = viewModelScope.launch {
+        _ui.update { it.copy(mutando = true, error = null) }
+        runCatching {
+            repo.subirImagen(idServicio, imagenPart)   // upload
+            repo.obtener(idServicio)                   // traer actualizado (con nueva imagenUrl)
         }
+            .onSuccess { actualizado ->
+                _ui.update { current ->
+                    current.copy(
+                        mutando = false,
+                        servicios = replaceServicio(current.servicios, actualizado),
+                        seleccionado = actualizado
+                    )
+                }
+            }
+            .onFailure { e ->
+                _ui.update { it.copy(mutando = false, error = e.message ?: "Error al subir imagen") }
+            }
     }
 
-    fun obtenerServicioPorId(id: Int): Servicio? {
-        return ui.value.servicios.find { it.idServicio == id }
+    fun limpiarError() {
+        _ui.update { it.copy(error = null) }
     }
 
+    // ---------- Helpers ----------
 
-
-    /** Crear */
-    fun crearServicio(body: ServicioCreate) {
-        viewModelScope.launch {
-            _ui.update { it.copy(mutando = true, error = null) }
-            runCatching { repo.crear(body) }
-                .onSuccess { creado ->
-                    val lista = _ui.value.servicios.toMutableList().apply { add(0, creado) }
-                    _ui.update { it.copy(mutando = false, servicios = lista, seleccionado = creado) }
-                }
-                .onFailure { e ->
-                    _ui.update { it.copy(mutando = false, error = e.message ?: "No se pudo crear el servicio") }
-                }
-        }
+    /** Reemplaza el servicio con mismo idServicio; si no existe, inserta al inicio. */
+    private fun replaceServicio(lista: List<Servicio>, nuevo: Servicio): List<Servicio> {
+        val idx = lista.indexOfFirst { it.idServicio == nuevo.idServicio }
+        return if (idx >= 0) lista.toMutableList().apply { this[idx] = nuevo } else listOf(nuevo) + lista
     }
-
-
-    /** Actualizar */
-    fun actualizarServicio(id: Int, cambios: ServicioUpdate) {
-        viewModelScope.launch {
-            _ui.update { it.copy(mutando = true, error = null) }
-            runCatching { repo.actualizar(id, cambios) }
-                .onSuccess { actualizado ->
-                    val lista = _ui.value.servicios.map { if (it.idServicio == id) actualizado else it }
-                    _ui.update { it.copy(mutando = false, servicios = lista, seleccionado = actualizado) }
-                }
-                .onFailure { e ->
-                    _ui.update { it.copy(mutando = false, error = e.message ?: "No se pudo actualizar el servicio") }
-                }
-        }
-    }
-
-    /** Eliminar */
-    fun eliminarServicio(id: Int) {
-        viewModelScope.launch {
-            _ui.update { it.copy(mutando = true, error = null) }
-            runCatching { repo.eliminar(id) }
-                .onSuccess {
-                    val lista = _ui.value.servicios.filterNot { it.idServicio == id }
-                    _ui.update { it.copy(mutando = false, servicios = lista, seleccionado = null) }
-                }
-                .onFailure { e ->
-                    _ui.update { it.copy(mutando = false, error = e.message ?: "No se pudo eliminar el servicio") }
-                }
-        }
-    }
-
-    fun limpiarError() = _ui.update { it.copy(error = null) }
-    /** Listar servicios */
-    fun cargarServicios(idNegocio: Int? = null) {
-        viewModelScope.launch {
-            _ui.update { it.copy(isLoading = true, error = null) }
-            runCatching { repo.listar(idNegocio) }
-                .onSuccess { lista ->
-                    val negociosUnicos = lista
-                        .distinctBy { it.negocio.idNegocio }
-                        .take(3)
-                    _ui.update {
-                        it.copy(
-                            isLoading = false,
-                            servicios = lista,
-                            negociosDestacados = negociosUnicos
-                        )
-                    }
-                }
-                .onFailure { e ->
-                    _ui.update { it.copy(isLoading = false, error = e.message ?: "Error al cargar servicios") }
-                }
-        }
-    }
-
 }

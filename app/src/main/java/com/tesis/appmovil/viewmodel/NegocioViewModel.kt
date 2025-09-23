@@ -3,6 +3,8 @@ package com.tesis.appmovil.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tesis.appmovil.data.remote.ApiResponse
+import com.tesis.appmovil.data.remote.RetrofitClient.api
 import com.tesis.appmovil.models.Negocio
 import com.tesis.appmovil.repository.NegocioRepository
 import com.tesis.appmovil.data.remote.dto.NegocioCreate
@@ -10,6 +12,7 @@ import com.tesis.appmovil.data.remote.dto.NegocioUpdate
 import com.tesis.appmovil.data.remote.request.NegocioResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -27,7 +30,8 @@ data class NegocioUiState(
     val negocios: List<Negocio> = emptyList(),
     val seleccionado: Negocio? = null,
     val detalle: NegocioResponse? = null,
-    val error: String? = null
+    val error: String? = null,
+    val negocio:   Negocio? = null,
 )
 
 
@@ -36,7 +40,7 @@ class NegocioViewModel(
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(NegocioUiState())
-    val ui: StateFlow<NegocioUiState> = _ui
+    val ui: StateFlow<NegocioUiState> = _ui.asStateFlow()
 
     /** Listar (con filtros opcionales) */
     fun cargarNegocios(idCategoria: Int? = null, idUbicacion: Int? = null, q: String? = null) {
@@ -47,7 +51,28 @@ class NegocioViewModel(
                 .onFailure { e -> _ui.update { it.copy(isLoading = false, error = e.message ?: "Error al cargar negocios") } }
         }
     }
-
+    fun obtenerMiNegocio() = viewModelScope.launch {
+        _ui.update { it.copy(isLoading = true, error = null) }
+        try {
+            val resp = api.getMiNegocio()
+            if (resp.isSuccessful) {
+                val body: ApiResponse<Negocio>? = resp.body()
+                if (body?.success == true && body.data != null) {
+                    _ui.update {
+                        it.copy(isLoading = false, negocio = body.data)
+                    }
+                } else {
+                    throw Exception(body?.message ?: "Negocio no encontrado")
+                }
+            } else {
+                throw Exception("HTTP ${resp.code()}")
+            }
+        } catch (e: Exception) {
+            _ui.update {
+                it.copy(isLoading = false, error = e.message)
+            }
+        }
+    }
     /** Detalle */
 //    fun obtenerNegocio(id: Int) {
 //        viewModelScope.launch {
