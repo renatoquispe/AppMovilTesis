@@ -190,8 +190,8 @@ fun ChatBotScreen() {
             SmallTopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Avatar animado en el TopBar
-                        BellaIcon(sizeDp = 28.dp)
+                        // 🔵 Avatar animado más grande en el TopBar (40.dp)
+                        BellaTopIcon(sizeDp = 40.dp)
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = when (step) {
@@ -225,8 +225,9 @@ fun ChatBotScreen() {
         ) {
             when (step) {
                 Step.GREETING -> {
+                    // 🔴 Burbuja con el nuevo Lottie "asistente.json"
                     BotBubble(
-                        icon = { BellaIcon() },
+                        icon = { AssistantIcon(sizeDp = 40.dp) },
                         text = "Hola 👋 soy BellaBot. ¿Quieres empezar?"
                     )
                     Spacer(Modifier.height(12.dp))
@@ -335,7 +336,6 @@ fun ChatBotScreen() {
                         errorMsg = null
                         scope.launch {
                             try {
-                                // Si el usuario eligió ubicación actual enviamos coords; si escribió dirección, no enviamos coords
                                 val (lat, lng) = if (useCurrentLocation == true) {
                                     latitude to longitude
                                 } else null to null
@@ -348,7 +348,6 @@ fun ChatBotScreen() {
                                     categoryId = selectedCategoryId,
                                     latitude = lat,
                                     longitude = lng,
-                                    // subí un poco el radio para asegurar resultados
                                     radiusKm = 3.0
                                 )
 
@@ -436,9 +435,35 @@ fun ChatBotScreen() {
 
 /* ---------- piezas de UI reutilizables ---------- */
 
+// TopBar avatar (mismo bellabot, pero con tamaño por defecto mayor)
+@Composable
+private fun BellaTopIcon(sizeDp: Dp = 40.dp, play: Boolean = true) {
+    BellaIcon(sizeDp = sizeDp, play = play)
+}
+
+// Icono general de Bella (bellabot.json)
 @Composable
 private fun BellaIcon(sizeDp: Dp = 24.dp, play: Boolean = true) {
     val comp by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.bellabot))
+    val progress by animateLottieCompositionAsState(
+        composition = comp,
+        iterations = LottieConstants.IterateForever,
+        isPlaying = play
+    )
+    LottieAnimation(
+        composition = comp,
+        progress = { progress },
+        modifier = Modifier
+            .size(sizeDp)
+            .clip(CircleShape),
+        contentScale = ContentScale.Crop
+    )
+}
+
+// NUEVO: icono para la burbuja (asistente.json)
+@Composable
+private fun AssistantIcon(sizeDp: Dp = 28.dp, play: Boolean = true) {
+    val comp by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.asistente))
     val progress by animateLottieCompositionAsState(
         composition = comp,
         iterations = LottieConstants.IterateForever,

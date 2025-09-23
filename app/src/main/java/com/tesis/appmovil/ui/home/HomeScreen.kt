@@ -6,7 +6,14 @@ import android.content.Intent
 import android.location.Geocoder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +29,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -31,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.text.isDigitsOnly
 import coil.compose.AsyncImage
 import androidx.navigation.NavController
 import com.tesis.appmovil.ChatActivity
@@ -64,17 +71,27 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
 
     // Etiqueta que se muestra en el chip de ubicación
     var locationLabel by remember { mutableStateOf("Lima, Perú") }
+    // Controla la animación de refresco del chip
+    var locRefreshing by remember { mutableStateOf(false) }
 
     // Pide permiso y, si lo obtiene, resuelve distrito/ciudad
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) {
-            scope.launch {
-                val coords = getCurrentOrLastLocation(context)
-                if (coords != null) {
-                    locationLabel = reverseGeocodeName(context, coords.first, coords.second)
+        scope.launch {
+            if (granted) {
+                locRefreshing = true
+                try {
+                    val coords = getCurrentOrLastLocation(context)
+                    if (coords != null) {
+                        locationLabel = reverseGeocodeName(context, coords.first, coords.second)
+                    }
+                } finally {
+                    locRefreshing = false
                 }
+            } else {
+                // si niega, detenemos animación
+                locRefreshing = false
             }
         }
     }
@@ -139,8 +156,10 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                         HeaderGreeting(
                             name = "Invitado",
                             location = locationLabel,
+                            isRefreshing = locRefreshing,
                             onLocationClick = {
-                                // Refresca tocando el chip
+                                // Al tocar el chip, lanzamos permiso/refresh y activamos animación de inmediato
+                                locRefreshing = true
                                 permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                             }
                         )
@@ -214,10 +233,12 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HeaderGreeting(
     name: String,
     location: String,
+    isRefreshing: Boolean,
     onLocationClick: () -> Unit
 ) {
     Column(
@@ -236,25 +257,59 @@ private fun HeaderGreeting(
                 fontSize = 20.sp, // antes headlineSmall, ahora más pequeño
                 fontWeight = FontWeight.Bold
             )
+
+            // Chip clickeable + ripple
+            val screenMax = (LocalConfiguration.current.screenWidthDp * 0.58f).dp
+            val infinite = rememberInfiniteTransition(label = "loc-rot")
+            val rotation by remember(isRefreshing) {
+                mutableStateOf(isRefreshing)
+            }.let {
+                if (isRefreshing) {
+                    infinite.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 360f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(900, easing = LinearEasing)
+                        ),
+                        label = "rot"
+                    )
+                } else {
+                    mutableStateOf(0f)
+                }
+            }
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(RoundedCornerShape(24.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { onLocationClick() }
-                    .padding(horizontal = 12.dp, vertical = 8.dp) // chip un poco más alto
-                    .heightIn(min = 40.dp)                       // ↑ alto mínimo
-                    .widthIn(max = 260.dp)                        // controla ancho máximo
+                    .clickable { onLocationClick() } // <- click con ripple por defecto
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .heightIn(min = 40.dp)
+                    .widthIn(max = screenMax)
             ) {
-                // texto de ubicación con ellipsis si es muy largo (ej. “Urb la Perla Alta, La Perla”)
                 Text(
-                    location,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(end = 6.dp)
+                    text = location,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .basicMarquee(
+                            iterations = Int.MAX_VALUE,
+                            delayMillis = 1300,
+                            velocity = 35.dp
+                        )
                 )
-                Icon(Icons.Outlined.LocationOn, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Icon(
+                    Icons.Outlined.LocationOn,
+                    contentDescription = "Ubicación",
+                    modifier = Modifier.rotate(if (isRefreshing) rotation else 0f)
+                )
             }
         }
     }
@@ -398,79 +453,81 @@ private fun SmallServiceCard(servicio: Servicio, onClick: () -> Unit = {}) {
 @Composable
 private fun FeaturedCard(servicio: Servicio, onClick: () -> Unit = {}) {
     val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
-    val horizontalPadding = 12.dp * 2
-    val spacing = 8.dp
-    val cardWidth = (screenWidth - horizontalPadding - spacing) / 2
+    the@ run {
+        val screenWidth = configuration.screenWidthDp.dp
+        val horizontalPadding = 12.dp * 2
+        val spacing = 8.dp
+        val cardWidth = (screenWidth - horizontalPadding - spacing) / 2
 
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .width(cardWidth)
-            .clickable(onClick = onClick)
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-            ) {
-                AsyncImage(
-                    model = servicio.imagenUrl,
-                    contentDescription = servicio.nombre,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                    contentScale = ContentScale.Crop
-                )
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .width(cardWidth)
+                .clickable(onClick = onClick)
+        ) {
+            Column {
                 Box(
                     modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.66f)
-                                )
-                            )
-                        )
-                )
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
                         .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .height(150.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = servicio.nombre,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = servicio.negocio.direccion ?: "Sin dirección",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    AsyncImage(
+                        model = servicio.imagenUrl,
+                        contentDescription = servicio.nombre,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface),
-                        contentAlignment = Alignment.Center
+                            .matchParentSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.66f)
+                                    )
+                                )
+                            )
+                    )
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = "S/ ${servicio.precio}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = servicio.nombre,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = servicio.negocio.direccion ?: "Sin dirección",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surface),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "S/ ${servicio.precio}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
