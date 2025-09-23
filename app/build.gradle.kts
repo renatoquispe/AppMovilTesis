@@ -81,6 +81,7 @@ dependencies {
     // (opcionales)
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.4.0")
+    implementation ("io.coil-kt:coil-compose:2.4.0")
 
     // Para permisos (Accompanist)
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")

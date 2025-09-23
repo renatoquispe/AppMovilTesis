@@ -3,115 +3,93 @@ package com.tesis.appmovil.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import com.tesis.appmovil.ui.business.RegisterBusinessScreen
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.tesis.appmovil.models.UserRole
 import com.tesis.appmovil.ui.auth.ChooseRoleScreen
 import com.tesis.appmovil.ui.auth.LoginScreen
 import com.tesis.appmovil.ui.auth.RegisterScreen
-import com.tesis.appmovil.ui.business.BusinessContactInfoScreen
-import com.tesis.appmovil.ui.business.BusinessImagesScreen
-import com.tesis.appmovil.ui.business.BusinessLocationScreen
-import com.tesis.appmovil.ui.business.BusinessScheduleScreen
+import com.tesis.appmovil.ui.business.*
 import com.tesis.appmovil.ui.home.BusinessDetailScreen
 import com.tesis.appmovil.ui.home.HomeScreen
-import com.tesis.appmovil.ui.search.BuscarScreen     // <- usa la pantalla con controles
+import com.tesis.appmovil.ui.search.BuscarScreen
+import com.tesis.appmovil.ui.servicios.CreateServiceScreen
 import com.tesis.appmovil.ui.servicios.EditServiceScreen
-import com.tesis.appmovil.viewmodel.AuthViewModel
-import com.tesis.appmovil.viewmodel.HomeNegocioViewModel
-import com.tesis.appmovil.viewmodel.HomeViewModel
-import com.tesis.appmovil.viewmodel.NegocioViewModel
-import com.tesis.appmovil.viewmodel.ServicioViewModel
+import com.tesis.appmovil.ui.servicios.ServiciosScreen
+import com.tesis.appmovil.viewmodel.*
 
-// ----------------- Rutas -----------------
+/** Destinos de la barra inferior */
 sealed class Dest(
     val route: String,
     val label: String = "",
     val icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
-    // flujo auth
-    object Login : Dest("login")
-    object Register : Dest("register")
-    object ChooseRole : Dest("chooseRole")
-    object BusinessContact : Dest("businessContact")
+    // flujo auth/onboarding
+    object Login            : Dest("login")
+    object Register         : Dest("register")
+    object ChooseRole       : Dest("chooseRole")
+    object RegisterBusiness : Dest("registerBusiness")
+    object BusinessContact  : Dest("businessContact")
     object BusinessSchedule : Dest("businessSchedule")
-
-
-    object BusinessImages : Dest("businessImages")
+    object BusinessImages   : Dest("businessImages")
     object BusinessLocation : Dest("businessLocation")
 
-
-
-
-    object RegisterBusiness : Dest("registerBusiness")
-
-
     // flujo principal con bottom bar
-    object Home : Dest("home", "Inicio", Icons.Outlined.Home)
-    object Search : Dest("search", "Buscar", Icons.Outlined.Search)
-//    object Account : Dest("account", "Cuenta", Icons.Outlined.AccountCircle)
+    object Home     : Dest("home",     "Inicio", Icons.Outlined.Home)
+    object Search   : Dest("search",   "Buscar", Icons.Outlined.Search)
     object Business : Dest("business", "Negocio", Icons.Default.Store)
-
 }
 
-/**
- * Root del app: navega Login -> ChooseRole -> Main (tabs persistentes)
- */
 @Composable
 fun AppRoot() {
     val nav = rememberNavController()
 
-
-//    NavHost(navController = nav, startDestination = Dest.Login.route) {
     NavHost(navController = nav, startDestination = "main") {
         composable("main") {
             MainWithBottomBar()
+            val vmNegocio: NegocioViewModel = viewModel()
+            val ui by vmNegocio.ui.collectAsState()
+
+            LaunchedEffect(Unit) {
+                vmNegocio.obtenerMiNegocio()
+            }
+
+            ui.negocio?.let { negocio ->
+                LaunchedEffect(negocio.id_negocio) {
+                    nav.navigate("main") {
+                        popUpTo("splash") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
+
+            Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
         }
 
-
-        // 4) MAIN: pestañas persistentes (sin NavHost interno)
+        // 1) MAIN: pestañas persistentes con BottomBar
         composable("main") {
             MainWithBottomBar()
         }
-
     }
 }
 
-/**
- * Bottom bar con 3 pestañas **persistentes**.
- * Mantenemos todas montadas y solo cambiamos visibilidad con alpha/zIndex.
- * Así el mapa NO se destruye al cambiar de pestaña.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainWithBottomBar() {
@@ -120,42 +98,39 @@ fun MainWithBottomBar() {
     val backStack by innerNav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route
 
-    // Rutas donde NO queremos mostrar el bottom bar
+    // Rutas donde ocultar bottom bar
     val hideBottomBarRoutes = listOf(
         Dest.Login.route,
         Dest.Register.route,
         Dest.RegisterBusiness.route,
-        Dest.Business.route,
+        Dest.BusinessContact.route,
         Dest.BusinessSchedule.route,
         Dest.BusinessImages.route,
-        Dest.BusinessLocation.route
-
+        Dest.BusinessLocation.route,
+        "createService/{negocioId}",
+        "editService/{idServicio}",
+        "servicios/{negocioId}"
     )
     val showBottomBar = current !in hideBottomBarRoutes
-    // Rutas donde sí queremos mostrar el botón de cerrar
+
+    // Rutas donde mostrar icono “Cerrar”
     val showCloseIconRoutes = listOf(
         Dest.Login.route,
-        Dest.Register.route,
-        Dest.RegisterBusiness.route,
-        Dest.Business.route
+        Dest.RegisterBusiness.route
     )
 
     Scaffold(
         topBar = {
             if (current in showCloseIconRoutes) {
-                androidx.compose.material3.TopAppBar(
+                CenterAlignedTopAppBar(
                     title = {},
                     actions = {
                         IconButton(onClick = {
-                            // Al presionar la X → vuelve al Home
                             innerNav.navigate(Dest.Home.route) {
                                 popUpTo(Dest.Home.route) { inclusive = true }
                             }
                         }) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Cerrar"
-                            )
+                            Icon(Icons.Default.Close, contentDescription = "Cerrar")
                         }
                     }
                 )
@@ -166,23 +141,22 @@ fun MainWithBottomBar() {
                 NavigationBar {
                     items.forEach { d ->
                         NavigationBarItem(
-                            selected = current == d.route,
-                            onClick = {
+                            selected   = current == d.route,
+                            onClick    = {
                                 innerNav.navigate(d.route) {
                                     popUpTo(innerNav.graph.startDestinationId) { saveState = true }
                                     launchSingleTop = true
-                                    restoreState = true
+                                    restoreState    = true
                                 }
                             },
-                            icon = { d.icon?.let { Icon(it, contentDescription = d.label) } },
-                            label = { Text(d.label) }
+                            icon       = { d.icon?.let { Icon(it, contentDescription = d.label) } },
+                            label      = { Text(d.label) }
                         )
                     }
                 }
             }
         }
-    )
-    { padding ->
+    ) { padding ->
         NavHost(
             navController = innerNav,
             startDestination = Dest.Home.route,
@@ -334,8 +308,32 @@ fun MainWithBottomBar() {
                 EditServiceScreen(servicioId = id, vm = vm, navController = innerNav)
             }
 
-
+            composable(
+                "servicios/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { back ->
+                val negocioId = back.arguments?.getInt("negocioId") ?: 0
+                val vmSrv: ServicioViewModel = viewModel()
+                ServiciosScreen(vmSrv, innerNav, negocioId) {
+                    innerNav.navigate("createService/$negocioId")
+                }
+            }
+            composable(
+                "createService/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { back ->
+                val negocioId = back.arguments?.getInt("negocioId") ?: 0
+                val vmSrv: ServicioViewModel = viewModel()
+                CreateServiceScreen(negocioId, vmSrv, innerNav)
+            }
+            composable(
+                "editService/{idServicio}",
+                arguments = listOf(navArgument("idServicio") { type = NavType.IntType })
+            ) { back ->
+                val idSrv: Int = back.arguments?.getInt("idServicio") ?: 0
+                val vmSrv: ServicioViewModel = viewModel()
+                EditServiceScreen(idSrv, vmSrv, innerNav)
+            }
         }
     }
 }
-

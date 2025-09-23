@@ -1,18 +1,23 @@
 package com.tesis.appmovil.ui.servicios
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.tesis.appmovil.viewmodel.ServicioViewModel
+import coil.compose.AsyncImage
 import com.tesis.appmovil.data.remote.dto.ServicioUpdate
-import androidx.compose.runtime.LaunchedEffect
+import com.tesis.appmovil.models.Servicio
+import com.tesis.appmovil.viewmodel.ServicioViewModel
 
-// Opt-in para las APIs experimentales de Material3 usadas (TopAppBar, Scaffold, etc.)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditServiceScreen(
@@ -21,31 +26,74 @@ fun EditServiceScreen(
     navController: NavController
 ) {
     val ui by vm.ui.collectAsState()
-    // intentar tomar el servicio localmente
-    val servicio = vm.obtenerServicioPorId(servicioId)
+    val focus = LocalFocusManager.current
 
-    var nombre by remember { mutableStateOf(servicio?.nombre ?: "") }
-    var precio by remember { mutableStateOf(servicio?.precio?.toString() ?: "") }
-    var duracion by remember { mutableStateOf(servicio?.duracionMinutos?.toString() ?: "") }
-    var descuento by remember { mutableStateOf(servicio?.descuento?.toString() ?: "") }
+    // ------- State -------
+    var nombre by rememberSaveable { mutableStateOf("") }
+    var precioText by rememberSaveable { mutableStateOf("") }
+    var duracionText by rememberSaveable { mutableStateOf("") }
+    var descuentoText by rememberSaveable { mutableStateOf("") }
 
-    // Si no lo tenemos local, pedir al ViewModel (carga detalle)
-    LaunchedEffect(servicioId) {
-        if (servicio == null) vm.obtenerServicio(servicioId)
+    var imagenUrl by rememberSaveable { mutableStateOf<String?>(null) } // URL actual
+    var pickedImage by remember { mutableStateOf<Uri?>(null) }          // preview local
+    var removePhoto by rememberSaveable { mutableStateOf(false) }        // eliminar foto
+
+    var errorMsg by rememberSaveable { mutableStateOf<String?>(null) }
+    var hydrated by rememberSaveable { mutableStateOf(false) }
+
+    // Señal local de éxito (igual idea que Create)
+    var updatedOk by rememberSaveable { mutableStateOf(false) }
+
+    // ------- Cargar detalle y “hidratar” campos -------
+    LaunchedEffect(servicioId) { vm.obtenerServicio(servicioId) }
+
+    LaunchedEffect(ui.seleccionado) {
+        if (!hydrated) {
+            (ui.seleccionado as? Servicio)?.let { s ->
+                nombre        = s.nombre
+                precioText    = s.precio.toString()
+                duracionText  = s.duracionMinutos.toString()
+                descuentoText = s.descuento?.toString() ?: ""
+                imagenUrl     = s.imagenUrl
+                hydrated = true
+            }
+        }
     }
 
-    // Cuando la actualización termine (si tu ViewModel establece ui.mutando y ui.seleccionado),
-    // volvemos hacia atrás automáticamente.
-    LaunchedEffect(ui.seleccionado, ui.mutando) {
-        if (!ui.mutando && ui.seleccionado?.idServicio == servicioId) {
-            navController.popBackStack()
+    // Selector de imagen (para preview; la subida real es otro flujo)
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        errorMsg = null
+        if (uri != null) {
+            pickedImage = uri
+            removePhoto = false
+        }
+    }
+
+    // ------- Navegación al terminar (misma idea que Create) -------
+    LaunchedEffect(updatedOk, ui.mutando, ui.error) {
+        if (updatedOk && !ui.mutando && ui.error == null) {
+            // avisar a ServiciosScreen que recargue
+            navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.set("refresh_servicios", true)
+
+            // volver (o fallback a "servicios")
+            val popped = navController.popBackStack()
+            if (!popped) {
+                navController.navigate("servicios") {
+                    popUpTo(0)
+                    launchSingleTop = true
+                }
+            }
+            // consumir la señal local
+            updatedOk = false
         }
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Editar servicio") })
-        }
+        topBar = { TopAppBar(title = { Text("Editar servicio") }) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -54,53 +102,142 @@ fun EditServiceScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (ui.cargando && !hydrated) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
+            Text("Imagen", style = MaterialTheme.typography.titleMedium)
+            AsyncImage(
+                model = when {
+                    pickedImage != null -> pickedImage
+                    removePhoto         -> null
+                    else                -> imagenUrl
+                },
+                contentDescription = "Imagen del servicio",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { pickImageLauncher.launch("image/*") },
+                    enabled = !ui.mutando
+                ) { Text("Cambiar foto") }
+                OutlinedButton(
+                    onClick = {
+                        pickedImage = null
+                        removePhoto = true
+                        errorMsg = null
+                    },
+                    enabled = (!ui.mutando && (pickedImage != null || imagenUrl != null))
+                ) { Text("Eliminar foto") }
+            }
+
+            Divider()
+
             OutlinedTextField(
                 value = nombre,
-                onValueChange = { nombre = it },
+                onValueChange = { nombre = it; errorMsg = null },
                 label = { Text("Nombre") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
             OutlinedTextField(
-                value = precio,
-                onValueChange = { precio = it },
+                value = precioText,
+                onValueChange = { txt ->
+                    if (txt.isEmpty() || txt.matches(Regex("""\d*\.?\d{0,2}"""))) {
+                        precioText = txt; errorMsg = null
+                    }
+                },
                 label = { Text("Precio") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
             OutlinedTextField(
-                value = duracion,
-                onValueChange = { duracion = it },
+                value = duracionText,
+                onValueChange = { txt ->
+                    if (txt.isEmpty() || txt.matches(Regex("""\d{0,4}"""))) {
+                        duracionText = txt; errorMsg = null
+                    }
+                },
                 label = { Text("Duración (min)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
             OutlinedTextField(
-                value = descuento,
-                onValueChange = { descuento = it },
+                value = descuentoText,
+                onValueChange = { txt ->
+                    if (txt.isEmpty() || txt.matches(Regex("""\d{0,3}(\.\d{0,2})?"""))) {
+                        descuentoText = txt; errorMsg = null
+                    }
+                },
                 label = { Text("Descuento (%)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            errorMsg?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { navController.popBackStack() }) { Text("Cancelar") }
-                Button(onClick = {
-                    // Validaciones mínimas
-                    val precioDouble = precio.toDoubleOrNull() ?: 0.0
-                    val durInt = duracion.toIntOrNull()
-                    val descDouble = descuento.toDoubleOrNull()
+            Spacer(Modifier.weight(1f))
 
-                    val update = ServicioUpdate(
-                        nombre = nombre,
-                        precio = precioDouble,
-                        duracionMinutos = durInt,
-                        descuento = descDouble
-                    )
-                    vm.actualizarServicio(servicioId, update)
-                    // la navegación de vuelta se hace en el LaunchedEffect cuando ViewModel actualice seleccionado
-                }) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { navController.popBackStack() }, enabled = !ui.mutando) {
+                    Text("Cancelar")
+                }
+                Button(
+                    onClick = {
+                        focus.clearFocus()
+                        errorMsg = null
+
+                        val precio    = precioText.toDoubleOrNull()
+                        val duracion  = duracionText.toIntOrNull()
+                        val descuento = descuentoText.toDoubleOrNull()
+
+                        when {
+                            nombre.isBlank() -> { errorMsg = "El nombre es obligatorio"; return@Button }
+                            precio == null   -> { errorMsg = "Precio inválido"; return@Button }
+                            duracion == null || duracion <= 0 -> {
+                                errorMsg = "Duración inválida"; return@Button
+                            }
+                            descuentoText.isNotBlank() &&
+                                    (descuento == null || descuento < 0.0 || descuento > 100.0) -> {
+                                errorMsg = "Descuento inválido (0 a 100)"; return@Button
+                            }
+                        }
+
+                        val imageToSend: String? = if (removePhoto) null else imagenUrl
+
+                        val dto = ServicioUpdate(
+                            nombre          = nombre.trim(),
+                            precio          = precio,
+                            duracionMinutos = duracion,
+                            descuento       = descuento,
+                            imagenUrl       = imageToSend
+                        )
+
+                        // IMPORTANTE: aquí solo disparamos la mutación;
+                        // cuando termine ok, LaunchedEffect(updatedOk, ui...) navega.
+                        vm.actualizarServicio(
+                            id = servicioId,
+                            body = dto,
+                            onSuccess = { _ -> updatedOk = true },   // <- misma idea que Create
+                            onError   = { msg -> errorMsg = msg }
+                        )
+                    },
+                    enabled = !ui.mutando
+                ) {
+                    if (ui.mutando) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp).padding(end = 8.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
                     Text("Guardar")
                 }
             }

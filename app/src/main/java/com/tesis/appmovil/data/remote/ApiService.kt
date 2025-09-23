@@ -10,7 +10,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.*
-
+import retrofit2.HttpException
 // Nota: Usa tus clases reales en models/ (Categoria, Negocio, Reseña, etc.)
 // Si no tienes "Create/Update", abajo en la sección C te doy plantillas.
 
@@ -309,7 +309,14 @@ interface ApiService {
     suspend fun deleteMensaje(@Path("id") id: Int): Response<Unit>
 
 
+    @Multipart
+    @POST("servicios/{id}/imagen")
+    suspend fun uploadServiceImage(
+        @Path("id") id: Int,
+        @Part imagen: MultipartBody.Part
+    ): Response<ApiResponse<Servicio>>
 
 
-
+    @GET("negocios/mio")
+    suspend fun getMiNegocio(): Response<ApiResponse<Negocio>>
 }
