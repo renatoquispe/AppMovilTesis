@@ -54,6 +54,9 @@ import com.tesis.appmovil.viewmodel.HomeViewModel
 import com.tesis.appmovil.viewmodel.NegocioViewModel
 import com.tesis.appmovil.viewmodel.ServicioViewModel
 
+// IMPORTA la pantalla del ChatBot que creamos
+import com.tesis.appmovil.ui.chat.ChatBotScreen
+
 // ----------------- Rutas -----------------
 sealed class Dest(
     val route: String,
@@ -73,21 +76,16 @@ sealed class Dest(
 
     object BusinessDocuments : Dest("businessDocuments")
 
-
-
     object RegisterBusiness : Dest("registerBusiness")
 
 
     // flujo principal con bottom bar
     object Home : Dest("home", "Inicio", Icons.Outlined.Home)
     object Search : Dest("search", "Buscar", Icons.Outlined.Search)
-//    object Account : Dest("account", "Cuenta", Icons.Outlined.AccountCircle)
+    //    object Account : Dest("account", "Cuenta", Icons.Outlined.AccountCircle)
     object Business : Dest("business", "Negocio", Icons.Default.Store)
 
     object BusinessReady : Dest("register/ready")
-
-
-
 }
 
 /**
@@ -97,19 +95,16 @@ sealed class Dest(
 fun AppRoot() {
     val nav = rememberNavController()
 
-
 //    NavHost(navController = nav, startDestination = Dest.Login.route) {
     NavHost(navController = nav, startDestination = "main") {
         composable("main") {
             MainWithBottomBar()
         }
 
-
         // 4) MAIN: pestañas persistentes (sin NavHost interno)
         composable("main") {
             MainWithBottomBar()
         }
-
     }
 }
 
@@ -138,7 +133,6 @@ fun MainWithBottomBar() {
         Dest.BusinessLocation.route,
         Dest.BusinessDocuments.route,
         Dest.BusinessReady.route
-
     )
     val showBottomBar = current !in hideBottomBarRoutes
     // Rutas donde sí queremos mostrar el botón de cerrar
@@ -204,7 +198,6 @@ fun MainWithBottomBar() {
             }
 
             // SEARCH (pasa los parámetros requeridos)
-//            RENATO
             composable(Dest.Search.route) {
                 val vmNegocios: HomeNegocioViewModel = viewModel()
                 val vmServicios: ServicioViewModel = viewModel()
@@ -249,7 +242,6 @@ fun MainWithBottomBar() {
                 RegisterBusinessScreen(
                     onContinue = {
                         innerNav.navigate(Dest.BusinessContact.route)
-//                        innerNav.popBackStack(Dest.Business.route, false)
                     },
                     onBack = {
                         // botón de cerrar (la X arriba) → vuelve al inicio
@@ -265,9 +257,6 @@ fun MainWithBottomBar() {
                     onContinue = {
                         // Por ahora al terminar → vuelve al inicio
                         innerNav.navigate(Dest.BusinessSchedule.route)
-//                        {
-//                            popUpTo(Dest.Home.route) { inclusive = true }
-//                        }
                     },
                     onBack = {
                         innerNav.popBackStack() // vuelve a RegisterBusiness
@@ -363,6 +352,14 @@ fun MainWithBottomBar() {
                 BusinessDetailScreen(idNegocio = idNegocio, vm = vm, onBack = { innerNav.popBackStack() })
             }
 
+            // --- RUTA PÚBLICA DEL CHATBOT ---
+            // Al navegar a "chatbot" se mostrará la pantalla ChatBotScreen() que creamos.
+            // Para abrirla desde cualquier botón: innerNav.navigate("chatbot")
+            composable("chatbot") {
+                ChatBotScreen()
+            }
+            // --- FIN RUTA CHATBOT ---
+
             // AÑADE AQUÍ la nueva ruta para editar servicio:
             composable(
                 route = "editService/{id}",
@@ -373,8 +370,6 @@ fun MainWithBottomBar() {
                 EditServiceScreen(servicioId = id, vm = vm, navController = innerNav)
             }
 
-
         }
     }
 }
-

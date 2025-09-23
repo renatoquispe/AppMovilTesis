@@ -219,6 +219,11 @@ interface ApiService {
         @Body body: UbicacionUpdate
     ): Response<Ubicacion>
 
+    // POST /api/filtrar-servicios  (usa el request que creamos)
+    @POST("filtrar-servicios")
+    suspend fun filterServicios(@Body body: com.tesis.appmovil.data.remote.ServicioFilterRequest): Response<com.tesis.appmovil.data.remote.ApiResponse<List<com.tesis.appmovil.models.Servicio>>>
+
+
     @DELETE("ubicaciones/{id}")
     suspend fun deleteUbicacion(@Path("id") id: Int): Response<Unit>
 

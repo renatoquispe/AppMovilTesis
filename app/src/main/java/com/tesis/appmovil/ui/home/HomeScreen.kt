@@ -48,7 +48,9 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
             ExtendedFloatingActionButton(
                 text = { Text("Ayuda") },
                 icon = { Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente") },
-                onClick = { context.startActivity(Intent(context, ChatActivity::class.java)) },
+                // >>> AQUÍ: abre el chatbot. Usa la ruta Compose "chatbot" si existe;
+                // si navController es null, como fallback abre la ChatActivity (WebView).
+                onClick = { navController?.navigate("chatbot") ?: ChatActivity.start(context) },
                 shape = RoundedCornerShape(16.dp)
             )
         },
