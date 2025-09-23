@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +35,14 @@ import com.tesis.appmovil.ChatActivity
 import com.tesis.appmovil.models.Servicio
 import com.tesis.appmovil.viewmodel.ServicioViewModel
 
+// Lottie 👇
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.tesis.appmovil.R
+
 @Composable
 fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
     val state by vm.ui.collectAsState()
@@ -45,14 +52,32 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
 
     Scaffold(
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                text = { Text("Ayuda") },
-                icon = { Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente") },
-                // >>> AQUÍ: abre el chatbot. Usa la ruta Compose "chatbot" si existe;
-                // si navController es null, como fallback abre la ChatActivity (WebView).
-                onClick = { navController?.navigate("chatbot") ?: ChatActivity.start(context) },
-                shape = RoundedCornerShape(16.dp)
-            )
+            // FAB SOLO CON LA ANIMACIÓN (sin texto)
+            FloatingActionButton(
+                onClick = {
+                    navController?.navigate("chatbot")
+                        ?: context.startActivity(Intent(context, ChatActivity::class.java))
+                },
+                shape = RoundedCornerShape(18.dp),
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 8.dp
+                )
+            ) {
+                val comp by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.bellabot))
+                val progress by animateLottieCompositionAsState(
+                    composition = comp,
+                    iterations = LottieConstants.IterateForever
+                )
+                // Aumenta/reduce el tamaño aquí si quieres (64.dp recomendado)
+                LottieAnimation(
+                    composition = comp,
+                    progress = { progress },
+                    modifier = Modifier.size(64.dp)
+                )
+            }
         },
         floatingActionButtonPosition = FabPosition.End
     ) { padding ->
