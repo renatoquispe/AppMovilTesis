@@ -19,6 +19,7 @@ import androidx.navigation.navArgument
 import com.tesis.appmovil.ui.auth.LoginScreen
 import com.tesis.appmovil.ui.auth.RegisterScreen
 import com.tesis.appmovil.ui.business.*
+import com.tesis.appmovil.ui.chat.ChatBotScreen
 import com.tesis.appmovil.ui.home.BusinessDetailScreen
 import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.ui.search.BuscarScreen
@@ -219,6 +220,13 @@ fun MainWithBottomBar() {
                     }
                 )
             }
+            // --- RUTA PÚBLICA DEL CHATBOT ---
+            // Al navegar a "chatbot" se mostrará la pantalla ChatBotScreen() que creamos.
+            // Para abrirla desde cualquier botón: innerNav.navigate("chatbot")
+            composable("chatbot") {
+                ChatBotScreen()
+            }
+            // --- FIN RUTA CHATBOT ---
 
 //            composable(Dest.Login.route) {
 //                LoginScreen(

@@ -12,6 +12,8 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.*
+import retrofit2.HttpException
+
 
 // Nota: Usa tus clases reales en models/ (Categoria, Negocio, Reseña, etc.)
 // Si no tienes "Create/Update", abajo en la sección C te doy plantillas.
@@ -151,6 +153,7 @@ interface ApiService {
     suspend fun getServicios(
         @Query("id_negocio") idNegocio: Int? = null
     ): Response<ApiResponse<List<Servicio>>>
+
 
 
     /** Obtener un servicio por id */
@@ -335,7 +338,25 @@ suspend fun deleteUbicacion(@Path("id") id: Int): Response<ApiResponse<Unit>>
     suspend fun deleteMensaje(@Path("id") id: Int): Response<Unit>
 
 
+    // ---------- SERVICIOS - SUBIR IMAGEN ----------
+
+    @Multipart
+    @POST("servicios/{id}/imagen")
+    suspend fun uploadServiceImage(
+        @Path("id") id: Int,
+        @Part imagen: MultipartBody.Part
+    ): Response<ApiResponse<Servicio>>
+
+    @GET("negocios/mio")
+    suspend fun getMiNegocio(): Response<ApiResponse<Negocio>>
+
+    // ---------- FILTRO DE SERVICIOS (para el chatbot) ----------
+    // POST /api/filtrar-servicios  (usa el request que creamos)
+    @POST("filtrar-servicios")
+    suspend fun filterServicios(@Body body: com.tesis.appmovil.data.remote.ServicioFilterRequest): Response<com.tesis.appmovil.data.remote.ApiResponse<List<com.tesis.appmovil.models.Servicio>>>
 
 
+//    @POST("servicios/filter")
+//    suspend fun filterServicios(@Body request: ServicioFilterRequest): Response<ApiResponse<List<Servicio>>>
 
 }

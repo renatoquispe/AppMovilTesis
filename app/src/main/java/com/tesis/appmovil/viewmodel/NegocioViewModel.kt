@@ -136,6 +136,8 @@ package com.tesis.appmovil.viewmodel
 import HorarioCreate
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tesis.appmovil.data.remote.ApiResponse
+import com.tesis.appmovil.data.remote.RetrofitClient.api
 import com.tesis.appmovil.models.Negocio
 import com.tesis.appmovil.repository.NegocioRepository
 import com.tesis.appmovil.data.remote.dto.NegocioCreate
@@ -146,6 +148,7 @@ import com.tesis.appmovil.ui.business.DaySchedule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 // Modelos temporales para horarios y servicios (si los necesitas después)
@@ -178,6 +181,7 @@ data class NegocioUiState(
     val seleccionado: Negocio? = null,
     val detalle: NegocioResponse? = null,
     val error: String? = null,
+    val negocio:   Negocio? = null,
 
     // Estado para el registro en progreso
     val negocioCreadoId: Int? = null,
@@ -189,7 +193,9 @@ class NegocioViewModel(
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(NegocioUiState())
-    val ui: StateFlow<NegocioUiState> = _ui
+//    val ui: StateFlow<NegocioUiState> = _ui
+    val ui: StateFlow<NegocioUiState> = _ui.asStateFlow()
+
 
     // ========== MÉTODOS EXISTENTES (para otras partes de la app) ==========
 
@@ -565,5 +571,28 @@ class NegocioViewModel(
     /** Verificar si el registro está completado */
     fun estaRegistroCompletado(): Boolean {
         return _ui.value.registroCompletado
+    }
+
+    fun obtenerMiNegocio() = viewModelScope.launch {
+        _ui.update { it.copy(isLoading = true, error = null) }
+        try {
+            val resp = api.getMiNegocio()
+            if (resp.isSuccessful) {
+                val body: ApiResponse<Negocio>? = resp.body()
+                if (body?.success == true && body.data != null) {
+                    _ui.update {
+                        it.copy(isLoading = false, negocio = body.data)
+                    }
+                } else {
+                    throw Exception(body?.message ?: "Negocio no encontrado")
+                }
+            } else {
+                throw Exception("HTTP ${resp.code()}")
+            }
+        } catch (e: Exception) {
+            _ui.update {
+                it.copy(isLoading = false, error = e.message)
+            }
+        }
     }
 }
