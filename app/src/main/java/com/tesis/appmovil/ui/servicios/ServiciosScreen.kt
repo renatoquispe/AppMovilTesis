@@ -13,22 +13,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Store
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.tesis.appmovil.data.remote.dto.ServicioUpdate // si lo usas en otra parte
 import com.tesis.appmovil.models.Servicio
 import com.tesis.appmovil.viewmodel.ServicioViewModel
 import kotlinx.coroutines.launch
@@ -47,7 +31,7 @@ import kotlinx.coroutines.launch
 fun ServiciosScreen(
     vm: ServicioViewModel,
     navController: NavController? = null,
-    negocioId: Int? = null, // opcional: para filtrar por negocio
+    negocioId: Int = 1,
     onAdd: () -> Unit = {}
 ) {
     val state by vm.ui.collectAsState()
@@ -55,12 +39,27 @@ fun ServiciosScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // cargar servicios (evitar en preview)
+    // ⬇️ Escucha la señal para refrescar al volver desde Edit/Create
+    val refreshSignal = navController?.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getStateFlow("refresh_servicios", false)
+        ?.collectAsState()
+
+    LaunchedEffect(refreshSignal?.value) {
+        if (refreshSignal?.value == true) {
+            vm.cargarServicios(negocioId)
+            navController?.currentBackStackEntry
+                ?.savedStateHandle
+                ?.set("refresh_servicios", false)
+        }
+    }
+
+    // Carga inicial
     LaunchedEffect(negocioId, isPreview) {
         if (!isPreview) vm.cargarServicios(negocioId)
     }
 
-    // mostrar snackbar ante errores desde el VM
+    // Snackbar de errores
     LaunchedEffect(state.error) {
         state.error?.let { msg ->
             scope.launch {
@@ -132,7 +131,7 @@ fun ServiciosScreen(
                     )
                 }
 
-                item { Spacer(Modifier.height(72.dp)) } // espacio para que no tape la bottom bar
+                item { Spacer(Modifier.height(72.dp)) }
             }
         }
     }
@@ -181,17 +180,39 @@ private fun ServiceListItemWithActions(
         Spacer(Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(servicio.nombre, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+            Text(
+                servicio.nombre,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+            )
             Spacer(Modifier.height(4.dp))
-            Text("S/ ${servicio.precio.toInt()}", style = MaterialTheme.typography.bodySmall)
-            Text("${servicio.duracionMinutos ?: 0} min", style = MaterialTheme.typography.bodySmall)
+
+            val precioInt = servicio.precio.toDoubleOrNull()?.toInt() ?: 0
+            Text("S/ $precioInt", style = MaterialTheme.typography.bodySmall)
+
+            val dur = servicio.duracionMinutos?.toString() ?: "0"
+            Text("$dur min", style = MaterialTheme.typography.bodySmall)
         }
 
         Spacer(Modifier.width(12.dp))
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.End) {
-            SmallIconButton(onClick = onEdit, container = Color(0xFFFFD54F), content = Color(0xFF4E342E), icon = Icons.Outlined.Edit, contentDescription = "Editar")
-            SmallIconButton(onClick = { showDeleteDialog = true }, container = Color(0xFFEF5350), content = Color.White, icon = Icons.Outlined.Delete, contentDescription = "Eliminar")
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.End
+        ) {
+            SmallIconButton(
+                onClick = onEdit,
+                container = Color(0xFFFFD54F),
+                content = Color(0xFF4E342E),
+                icon = Icons.Outlined.Edit,
+                contentDescription = "Editar"
+            )
+            SmallIconButton(
+                onClick = { showDeleteDialog = true },
+                container = Color(0xFFEF5350),
+                content = Color.White,
+                icon = Icons.Outlined.Delete,
+                contentDescription = "Eliminar"
+            )
         }
     }
 }
