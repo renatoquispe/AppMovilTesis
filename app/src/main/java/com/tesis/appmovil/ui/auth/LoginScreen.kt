@@ -31,6 +31,12 @@ fun LoginScreen(
     onNavigateToRegister: () -> Unit
 ) {
     val state by vm.uiState.collectAsState()
+    // DEBUG
+    LaunchedEffect(state.userId) {
+        if (state.userId != null) {
+            println("✅ LOGIN EXITOSO - UserId: ${state.userId}")
+        }
+    }
     val context = LocalContext.current
     val activity = context as Activity
 

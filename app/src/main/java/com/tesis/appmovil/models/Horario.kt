@@ -1,10 +1,11 @@
+// models/Horario.kt
 package com.tesis.appmovil.models
 
 data class Horario(
-    val id_horario: Int,
-    val id_negocio: Int,
-    val dia_semana: String,
-    val hora_apertura: String,   // mejor manejar TIME como String "HH:mm"
-    val hora_cierre: String,
-    val estado_auditoria: Boolean
+    val idHorario: Int,        // ← camelCase
+    val idNegocio: Int,        // ← camelCase  
+    val diaSemana: String,     // ← camelCase
+    val horaApertura: String,  // ← camelCase
+    val horaCierre: String,    // ← camelCase
+    val estado: Int            // ← En Postman viene como "estado", no "estado_auditoria"
 )

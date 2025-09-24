@@ -1,10 +1,17 @@
-package com.tesis.appmovil.data.remote.dto
+import com.google.gson.annotations.SerializedName
 
 data class HorarioCreate(
-    val id_negocio: Int,
-    val dia_semana: String,     // ej. "Lunes" (como en tu BD)
-    val hora_apertura: String,  // "HH:mm" -> ej. "09:00"
-    val hora_cierre: String     // "HH:mm" -> ej. "18:00"
+    @SerializedName("idNegocio")
+    val idNegocio: Int,
+
+    @SerializedName("diaSemana")
+    val diaSemana: String,
+
+    @SerializedName("horaApertura")
+    val horaApertura: String,
+
+    @SerializedName("horaCierre")
+    val horaCierre: String
 )
 
 data class HorarioUpdate(

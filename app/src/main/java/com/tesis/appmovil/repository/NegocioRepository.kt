@@ -44,18 +44,47 @@ class NegocioRepository(
         api.createNegocio(body).bodyOrThrow().data
             ?: throw IllegalStateException("Error al crear negocio")
 
-    suspend fun actualizar(id: Int, body: NegocioUpdate): Negocio =
-        api.updateNegocio(id, body).bodyOrThrow().data
-            ?: throw IllegalStateException("Error al actualizar negocio")
+//    suspend fun actualizar(id: Int, body: NegocioUpdate): Negocio =
+//        api.updateNegocio(id, body).bodyOrThrow().data
+//            ?: throw IllegalStateException("Error al actualizar negocio")
 
+    suspend fun actualizar(id: Int, body: NegocioUpdate): Negocio {
+        val response = api.updateNegocio(id, body).bodyOrThrow()
+
+        // Si el backend no devuelve el objeto actualizado, obtenerlo nuevamente
+        return response.data ?: obtener(id)
+    }
     suspend fun eliminar(id: Int) {
         val resp = api.deleteNegocio(id)
         if (!resp.isSuccessful) throw HttpException(resp)
     }
+
+    // En NegocioRepository.kt
+    suspend fun obtenerNegociosPorUsuario(idUsuario: Int): List<Negocio> {
+        // Asumiendo que tienes un endpoint para esto
+        val response = api.getNegociosPorUsuario(idUsuario)
+        return if (response.isSuccessful) {
+            response.body()?.data ?: emptyList()
+        } else {
+            emptyList()
+        }
+    }
 }
 
 /* ==== Helper para desempaquetar ApiResponse<T> ==== */
+//private fun <T> Response<ApiResponse<T>>.bodyOrThrow(): ApiResponse<T> {
+//    if (isSuccessful) body()?.let { return it }
+//    throw HttpException(this)
+//}
 private fun <T> Response<ApiResponse<T>>.bodyOrThrow(): ApiResponse<T> {
-    if (isSuccessful) body()?.let { return it }
-    throw HttpException(this)
+    if (!isSuccessful) {
+        throw HttpException(this)
+    }
+
+    val body = body()
+    if (body == null) {
+        throw IllegalStateException("Respuesta vacía del servidor")
+    }
+
+    return body
 }

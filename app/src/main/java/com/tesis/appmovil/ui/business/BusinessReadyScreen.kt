@@ -15,9 +15,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tesis.appmovil.R
+import com.tesis.appmovil.viewmodel.NegocioViewModel
 
 @Composable
 fun BusinessReadyScreen(
+    negocioViewModel: NegocioViewModel, // ← Agregar este parámetro
     onPublish: () -> Unit
 ) {
     Column(

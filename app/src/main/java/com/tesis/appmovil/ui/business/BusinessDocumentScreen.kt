@@ -28,10 +28,12 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.tesis.appmovil.viewmodel.NegocioViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun BusinessDocumentsScreen(
+    negocioViewModel: NegocioViewModel, // ← Agregar este parámetro
     onContinue: () -> Unit,
     onSkip: () -> Unit,
     onBack: () -> Unit

@@ -81,15 +81,16 @@ fun BusinessProfileScreen(
                     id_negocio = negocioResp.idNegocio ?: 0,
                     id_categoria = negocioResp.categoria?.idCategoria ?: 0,
                     id_ubicacion = negocioResp.ubicacion?.idUbicacion ?: 0,
+                    id_usuario = negocioResp.idUsuario,
                     nombre = negocioResp.nombre ?: "",
                     descripcion = negocioResp.descripcion,
-                    direccion = negocioResp.direccion,
+                    direccion = negocioResp.direccion?:"",
                     latitud = negocioResp.latitud?.toDoubleOrNull(),
                     longitud = negocioResp.longitud?.toDoubleOrNull(),
                     telefono = negocioResp.telefono,
                     correo_contacto = negocioResp.correoContacto,
                     fecha_creacion = negocioResp.fechaCreacion?.let { Date() } ?: Date(),
-                    estado_auditoria = (negocioResp.estado as? Boolean) ?: true
+                    estado_auditoria = negocioResp.estadoAuditoria ?: 0
                 )
 
                 BusinessProfile(
@@ -104,7 +105,7 @@ fun BusinessProfileScreen(
                             latitud = updatedNegocioModel.latitud,
                             longitud = updatedNegocioModel.longitud,
                             telefono = updatedNegocioModel.telefono,
-                            correo_contacto = updatedNegocioModel.correo_contacto,
+                            correoContacto = updatedNegocioModel.correo_contacto,
                             estado_auditoria = null
                         )
                         vm.actualizarNegocio(negocioId, update)

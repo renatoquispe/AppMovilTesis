@@ -11,6 +11,7 @@ import com.tesis.appmovil.repository.UsuarioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.tesis.appmovil.repository.NegocioRepository
 
 data class AuthUiState(
     val name: String = "",
@@ -18,7 +19,8 @@ data class AuthUiState(
     val password: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
-    val user: String? = null,          // guardamos solo el correo
+    val user: String? = null,
+    val userId: Int? = null,           // ← NUEVO: ID del usuario
     val role: UserRole? = null,
     val token: String? = null //probando esto Susan
 )
@@ -28,6 +30,8 @@ class AuthViewModel : ViewModel() {
     val uiState: StateFlow<AuthUiState> = _uiState
 
     private val usuarioRepo = UsuarioRepository()
+    private val negocioRepo = NegocioRepository() // ← Agregar el repositorio de negocios
+
 
     fun onUpdateName(v: String)    { _uiState.value = _uiState.value.copy(name = v,    error = null) }
     fun onEmailChange(v: String)   { _uiState.value = _uiState.value.copy(email = v,   error = null) }
@@ -40,6 +44,8 @@ class AuthViewModel : ViewModel() {
     }
 
     /** Registro local */
+
+    /** Registro con login automático - VERSIÓN CORRECTA */
     fun register(
         nombre: String,
         email: String,
@@ -55,9 +61,11 @@ class AuthViewModel : ViewModel() {
             return
         }
         _uiState.value = state.copy(isLoading = true, error = null)
+
         viewModelScope.launch {
-            runCatching {
-                usuarioRepo.crear(
+            try {
+                // 1. Registrar usuario - Si falla, lanzará excepción automáticamente
+                val usuarioCreado = usuarioRepo.crear(
                     UsuarioCreate(
                         nombre = nombre,
                         apellidoPaterno = apellidoPaterno,
@@ -68,20 +76,86 @@ class AuthViewModel : ViewModel() {
                         fotoPerfil = fotoPerfil
                     )
                 )
-            }.onSuccess {
+
+                println("✅ Usuario registrado: ${usuarioCreado.correo}")
+
+                // 2. Hacer login automático después del registro exitoso
+                val loginResponse = RetrofitClient.api.login(LoginRequest(email, password))
+
+                if (loginResponse.isSuccessful && loginResponse.body()?.success == true) {
+                    val body = loginResponse.body()!!
+                    val userData = body.data!!.usuario
+                    val token = body.data!!.token
+
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        user = userData.correo,
+                        userId = userData.idUsuario,
+                        token = token
+                    )
+
+                    // Configurar Retrofit con el token
+                    RetrofitClient.setTokenProvider { _uiState.value.token }
+
+                    println("✅ REGISTRO + LOGIN EXITOSO - Token: $token")
+
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Registro exitoso, pero error en login: ${loginResponse.body()?.message}"
+                    )
+                }
+
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    user = email,    // flag de éxito
-                    password = ""    // limpia campo
-                )
-            }.onFailure { e ->
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "No se pudo registrar"
+                    error = "Error: ${e.message ?: "No se pudo registrar el usuario"}"
                 )
             }
         }
     }
+//    fun register(
+//        nombre: String,
+//        email: String,
+//        password: String,
+//        apellidoPaterno: String = "",
+//        apellidoMaterno: String = "",
+//        fechaNacimiento: String = "2000-01-01",
+//        fotoPerfil: String? = null
+//    ) {
+//        val state = _uiState.value
+//        if (nombre.isBlank() || email.isBlank() || password.isBlank()) {
+//            _uiState.value = state.copy(error = "Completa nombre, correo y contraseña")
+//            return
+//        }
+//        _uiState.value = state.copy(isLoading = true, error = null)
+//        viewModelScope.launch {
+//            runCatching {
+//                usuarioRepo.crear(
+//                    UsuarioCreate(
+//                        nombre = nombre,
+//                        apellidoPaterno = apellidoPaterno,
+//                        apellidoMaterno = apellidoMaterno,
+//                        correo = email,
+//                        contrasena = password,
+//                        fechaNacimiento = fechaNacimiento,
+//                        fotoPerfil = fotoPerfil
+//                    )
+//                )
+//            }.onSuccess {
+//                _uiState.value = _uiState.value.copy(
+//                    isLoading = false,
+//                    user = email,    // flag de éxito
+//                    password = ""    // limpia campo
+//                )
+//            }.onFailure { e ->
+//                _uiState.value = _uiState.value.copy(
+//                    isLoading = false,
+//                    error = e.message ?: "No se pudo registrar"
+//                )
+//            }
+//        }
+//    }
 
     /** Login tradicional */
     fun login() {
@@ -106,7 +180,9 @@ class AuthViewModel : ViewModel() {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         user = userData.correo,
-                        token = token //SUSANN
+                        userId = userData.idUsuario,
+                        token = token
+
                     )
                     // 👇 Aquí conectas el token con Retrofit
                     RetrofitClient.setTokenProvider { _uiState.value.token }
@@ -136,7 +212,8 @@ class AuthViewModel : ViewModel() {
                     val usuario = resp.body()!!.data!!.usuario
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        user = usuario.correo
+                        user = usuario.correo,
+                        userId = usuario.idUsuario
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
@@ -150,6 +227,16 @@ class AuthViewModel : ViewModel() {
                     error = e.message ?: "Error de red en Google Sign-In"
                 )
             }
+        }
+    }
+
+    suspend fun usuarioTieneNegocio(idUsuario: Int): Boolean {
+        return try {
+            val negocios = negocioRepo.obtenerNegociosPorUsuario(idUsuario)
+            negocios.isNotEmpty()
+        } catch (e: Exception) {
+            println("❌ Error verificando negocios del usuario: ${e.message}")
+            false
         }
     }
 }

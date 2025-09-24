@@ -4,6 +4,7 @@ package com.tesis.appmovil.data.remote.request
 
 data class NegocioResponse(
     val idNegocio: Int,
+    val idUsuario: Int,
     val nombre: String,
     val descripcion: String? = null,
     val direccion: String? = null,
@@ -12,6 +13,7 @@ data class NegocioResponse(
     val telefono: String? = null,
     val correoContacto: String? = null,
     val fechaCreacion: String? = null,
+    val estadoAuditoria: Int?,
     val estado: Any? = null,         // puede venir 1 o Buffer
     val categoria: CategoriaDto,
     val ubicacion: UbicacionDto? = null,

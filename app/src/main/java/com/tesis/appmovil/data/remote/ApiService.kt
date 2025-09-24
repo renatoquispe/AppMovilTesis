@@ -1,4 +1,6 @@
 package com.tesis.appmovil.data.remote
+import HorarioCreate
+import HorarioUpdate
 import com.tesis.appmovil.data.remote.dto.*
 import com.tesis.appmovil.data.remote.request.GoogleLoginRequest
 import com.tesis.appmovil.data.remote.request.LoginRequest
@@ -46,24 +48,47 @@ interface ApiService {
     @DELETE("usuarios/{id}")
     suspend fun deleteUsuario(@Path("id") id: Int): Response<Unit>
 
+    @GET("usuarios/{id}/negocios")
+    suspend fun getNegociosPorUsuario(@Path("id") idUsuario: Int): Response<ApiResponse<List<Negocio>>>
+
     // ---------- CATEGORIAS ----------
     @GET("categorias")
-    suspend fun getCategorias(): Response<List<Categoria>>
+    suspend fun getCategorias(): Response<ApiResponse<List<Categoria>>>
 
     @GET("categorias/{id}")
-    suspend fun getCategoria(@Path("id") id: Int): Response<Categoria>
+    suspend fun getCategoria(@Path("id") id: Int): Response<ApiResponse<Categoria>>
 
     @POST("categorias")
-    suspend fun createCategoria(@Body body: CategoriaCreate): Response<Categoria>
+    suspend fun createCategoria(@Body body: CategoriaCreate): Response<ApiResponse<Categoria>>
 
     @PUT("categorias/{id}")
     suspend fun updateCategoria(
         @Path("id") id: Int,
         @Body body: CategoriaUpdate
-    ): Response<Categoria>
+    ): Response<ApiResponse<Categoria>>
 
+//    @GET("categorias")
+//    suspend fun getCategorias(): Response<List<Categoria>>
+//
+//    @GET("categorias/{id}")
+//    suspend fun getCategoria(@Path("id") id: Int): Response<Categoria>
+//
+//    @POST("categorias")
+//    suspend fun createCategoria(@Body body: CategoriaCreate): Response<Categoria>
+//
+//    @PUT("categorias/{id}")
+//    suspend fun updateCategoria(
+//        @Path("id") id: Int,
+//        @Body body: CategoriaUpdate
+//    ): Response<Categoria>
+
+
+//    @DELETE("categorias/{id}")
+//    suspend fun deleteCategoria(@Path("id") id: Int): Response<Unit>
+    // En ApiService.kt, cambia los DELETE:
     @DELETE("categorias/{id}")
-    suspend fun deleteCategoria(@Path("id") id: Int): Response<Unit>
+    suspend fun deleteCategoria(@Path("id") id: Int): Response<ApiResponse<Unit>>
+
 
 
     // ---------- NEGOCIOS ----------
@@ -78,42 +103,20 @@ interface ApiService {
 
 
 
-    // 👈 aquí va ApiResponse
-//    @GET("negocios")
-//    suspend fun getNegocios(
-//        @Query("id_categoria") idCategoria: Int? = null,
-//        @Query("id_ubicacion") idUbicacion: Int? = null,
-//        @Query("q") q: String? = null
-//    ): Response<List<Negocio>>   // usa tu models/Negocio.kt
-
-
-
     @GET("negocios/{id}")
     suspend fun getNegocio(
         @Path("id") id: Int
     ): Response<ApiResponse<Negocio>>   // 👈 aquí también
-//    @GET("negocios/{id}")
-//    suspend fun getNegocio(@Path("id") id: Int): Response<Negocio>
-
-//    @POST("negocios")
-//    suspend fun createNegocio(@Body body: NegocioCreate): Response<Negocio>
 
     @POST("negocios")
     suspend fun createNegocio(@Body body: NegocioCreate): Response<ApiResponse<Negocio>>
 
-//    @PUT("negocios/{id}")
-//    suspend fun updateNegocio(
-//        @Path("id") id: Int,
-//        @Body body: NegocioUpdate
-//    ): Response<Negocio>
     @PUT("negocios/{id}")
     suspend fun updateNegocio(
         @Path("id") id: Int,
         @Body body: NegocioUpdate
     ): Response<ApiResponse<Negocio>>
 
-//    @DELETE("negocios/{id}")
-//    suspend fun deleteNegocio(@Path("id") id: Int): Response<Unit>
     @DELETE("negocios/{id}")
     suspend fun deleteNegocio(@Path("id") id: Int): Response<Unit>
 
@@ -156,11 +159,6 @@ interface ApiService {
         @Path("id") id: Int
     ): Response<ApiResponse<Servicio>>
 
-//    @GET("servicios")
-//    suspend fun getServicios(): Response<ApiResponse<List<Servicio>>>
-
-//    @POST("servicios")
-//    suspend fun createServicio(@Body body: ServicioCreate): Response<ApiResponse<Servicio>>
     /** Crear servicio */
     @POST("servicios")
     suspend fun createServicio(
@@ -189,9 +187,20 @@ interface ApiService {
 
     @GET("horarios/{id}")
     suspend fun getHorario(@Path("id") id: Int): Response<Horario>
-
+    // En tu ApiService.kt, agrega estos endpoints:
+    // ApiService.kt - Asegúrate de que esté correcto
     @POST("horarios")
-    suspend fun createHorario(@Body body: HorarioCreate): Response<Horario>
+    suspend fun createHorario(@Body horario: HorarioCreate): Response<ApiResponse<Horario>>
+
+    @POST("horarios/lote")
+    suspend fun createHorariosLote(@Body horarios: List<HorarioCreate>): Response<ApiResponse<List<Horario>>>
+
+    @GET("negocios/{id}/horarios")
+    suspend fun getHorariosByNegocio(@Path("id") idNegocio: Int): Response<ApiResponse<List<Horario>>>
+
+
+    //    @POST("horarios")
+//    suspend fun createHorario(@Body body: HorarioCreate): Response<Horario>
 
     @PUT("horarios/{id}")
     suspend fun updateHorario(
@@ -205,22 +214,39 @@ interface ApiService {
 
     // ---------- UBICACIONES ----------
     @GET("ubicaciones")
-    suspend fun getUbicaciones(): Response<List<Ubicacion>>
+    suspend fun getUbicaciones(): Response<ApiResponse<List<Ubicacion>>>
 
     @GET("ubicaciones/{id}")
-    suspend fun getUbicacion(@Path("id") id: Int): Response<Ubicacion>
+    suspend fun getUbicacion(@Path("id") id: Int): Response<ApiResponse<Ubicacion>>
 
     @POST("ubicaciones")
-    suspend fun createUbicacion(@Body body: UbicacionCreate): Response<Ubicacion>
+    suspend fun createUbicacion(@Body body: UbicacionCreate): Response<ApiResponse<Ubicacion>>
 
     @PUT("ubicaciones/{id}")
     suspend fun updateUbicacion(
         @Path("id") id: Int,
         @Body body: UbicacionUpdate
-    ): Response<Ubicacion>
+    ): Response<ApiResponse<Ubicacion>>
 
-    @DELETE("ubicaciones/{id}")
-    suspend fun deleteUbicacion(@Path("id") id: Int): Response<Unit>
+//    @GET("ubicaciones")
+//    suspend fun getUbicaciones(): Response<List<Ubicacion>>
+//
+//    @GET("ubicaciones/{id}")
+//    suspend fun getUbicacion(@Path("id") id: Int): Response<Ubicacion>
+//
+//    @POST("ubicaciones")
+//    suspend fun createUbicacion(@Body body: UbicacionCreate): Response<Ubicacion>
+//
+//    @PUT("ubicaciones/{id}")
+//    suspend fun updateUbicacion(
+//        @Path("id") id: Int,
+//        @Body body: UbicacionUpdate
+//    ): Response<Ubicacion>
+
+//    @DELETE("ubicaciones/{id}")
+//    suspend fun deleteUbicacion(@Path("id") id: Int): Response<Unit>
+@DELETE("ubicaciones/{id}")
+suspend fun deleteUbicacion(@Path("id") id: Int): Response<ApiResponse<Unit>>
 
     // ---------- RESEÑAS ----------
     @GET("resenas")

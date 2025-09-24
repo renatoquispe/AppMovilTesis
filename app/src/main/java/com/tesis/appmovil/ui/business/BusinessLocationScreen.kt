@@ -188,10 +188,12 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.tesis.appmovil.viewmodel.NegocioViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun BusinessLocationScreen(
+    negocioViewModel: NegocioViewModel, // ← Agregar este parámetro
     onLocationSelected: (LatLng) -> Unit,
     onBack: () -> Unit
 ) {
