@@ -4,14 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tesis.appmovil.models.Negocio
 import com.tesis.appmovil.repository.NegocioRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class HomeNegocioState(
     val isLoading: Boolean = false,
     val error: String? = null,
-    val negocios: List<Negocio> = emptyList()
+    val negocios: List<Negocio> = emptyList(),
+    val query: String = ""
 )
 
 class HomeNegocioViewModel(
@@ -19,46 +21,86 @@ class HomeNegocioViewModel(
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeNegocioState())
-    val state: StateFlow<HomeNegocioState> = _state
+    val state: StateFlow<HomeNegocioState> = _state.asStateFlow()
 
-    /** Carga 1 negocio (el primero disponible) */
-    fun cargarUno() {
-        if (_state.value.isLoading) return
-        _state.value = _state.value.copy(isLoading = true, error = null)
+    // flujo de texto para debounce
+    private val queryFlow = MutableStateFlow("")
+    private var firstLoadDone = false
 
+    // >>> NUEVO: cancelamos la petición anterior para que la última gane
+    private var currentJob: Job? = null
+
+    init {
         viewModelScope.launch {
-            try {
-                // Antes: repo.listarDestacados(limit = 1)
-                val destacados = repo.listar().take(1)
-
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    negocios = destacados
-                )
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Error desconocido"
-                )
-            }
+            queryFlow
+                .debounce(350)
+                .distinctUntilChanged()
+                .collect { q ->
+                    buscarRemoto(q)
+                }
         }
     }
 
-    /** Si luego quieres N negocios destacados, usa este helper. */
-    fun cargarDestacados(limit: Int = 1) {
-        if (_state.value.isLoading) return
-        _state.value = _state.value.copy(isLoading = true, error = null)
+    /** Primera carga / destacados */
+    fun cargarDestacados(limit: Int = 10) {
+        if (_state.value.isLoading) { /* opcional: puedes dejarlo */ }
+        currentJob?.cancel()
+        currentJob = viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            runCatching { repo.listar(page = 1, pageSize = limit, activos = null) }
+                .onSuccess { lista ->
+                    firstLoadDone = true
+                    _state.update { it.copy(isLoading = false, negocios = lista) }
+                }
+                .onFailure { e ->
+                    if (e !is CancellationException) {
+                        _state.update { it.copy(isLoading = false, error = e.message) }
+                    }
+                }
+        }
+    }
 
-        viewModelScope.launch {
-            try {
-                val lista = repo.listar().let { if (it.size > limit) it.take(limit) else it }
-                _state.value = _state.value.copy(isLoading = false, negocios = lista)
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Error desconocido"
+    /** El usuario escribe en la barra */
+    fun onQueryChange(newValue: String) {
+        _state.update { it.copy(query = newValue) }
+        queryFlow.value = newValue
+    }
+
+    /** Fuerza búsqueda inmediata (enter o icono search) */
+    fun buscarAhora() {
+        buscarRemoto(_state.value.query)
+    }
+
+    private fun buscarRemoto(q: String) {
+        currentJob?.cancel()
+        currentJob = viewModelScope.launch {
+            val query = q.trim()
+
+            // >>> CAMBIO: si está vacío, SIEMPRE recargamos destacados
+            if (query.isBlank()) {
+                cargarDestacados(limit = 10)
+                return@launch
+            }
+
+            _state.update { it.copy(isLoading = true, error = null) }
+            runCatching {
+                repo.listar(
+                    q = query,
+                    distrito = null,
+                    ciudad = null,
+                    activos = null,
+                    page = 1,
+                    pageSize = 20
                 )
             }
+                .onSuccess { lista ->
+                    _state.update { it.copy(isLoading = false, negocios = lista) }
+                }
+                .onFailure { e ->
+                    if (e !is CancellationException) {
+                        _state.update { it.copy(isLoading = false, error = e.message) }
+                    }
+                }
         }
     }
 }

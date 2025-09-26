@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    private const val BASE_URL = "https://eight-months-occur.loca.lt/api/"
+    private const val BASE_URL = "https://loud-views-hang.loca.lt/api/"
 
 
     private var tokenProvider: (() -> String?)? = null

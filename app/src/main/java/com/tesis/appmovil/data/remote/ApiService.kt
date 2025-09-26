@@ -14,10 +14,6 @@ import retrofit2.Response
 import retrofit2.http.*
 import retrofit2.HttpException
 
-
-// Nota: Usa tus clases reales en models/ (Categoria, Negocio, Reseña, etc.)
-// Si no tienes "Create/Update", abajo en la sección C te doy plantillas.
-
 interface ApiService {
 
     // ---------- AUTH ----------
@@ -26,20 +22,16 @@ interface ApiService {
 
     @POST("auth/google")
     suspend fun loginWithGoogle(@Body body: GoogleLoginRequest): Response<LoginResponse>
-    // Si tienes registro o refresh en tu back, los declaras aquí:
-    // @POST("auth/register") suspend fun register(@Body body: UsuarioCreate): Response<Usuario>
-    // @POST("auth/refresh") suspend fun refresh(@Body body: TokenRefreshRequest): Response<TokenRefreshResponse>
 
     // ---------- USUARIOS ----------
     @GET("usuarios")
-    suspend fun getUsuarios(): Response<List<Usuario>> // o Response<ApiResponse<List<Usuario>>>
+    suspend fun getUsuarios(): Response<List<Usuario>>
 
     @GET("usuarios/{id}")
     suspend fun getUsuario(@Path("id") id: Int): Response<Usuario>
 
     @POST("usuarios")
     suspend fun createUsuario(@Body body: UsuarioCreate): Response<Usuario>
-
 
     @PUT("usuarios/{id}")
     suspend fun updateUsuario(
@@ -69,46 +61,31 @@ interface ApiService {
         @Body body: CategoriaUpdate
     ): Response<ApiResponse<Categoria>>
 
-//    @GET("categorias")
-//    suspend fun getCategorias(): Response<List<Categoria>>
-//
-//    @GET("categorias/{id}")
-//    suspend fun getCategoria(@Path("id") id: Int): Response<Categoria>
-//
-//    @POST("categorias")
-//    suspend fun createCategoria(@Body body: CategoriaCreate): Response<Categoria>
-//
-//    @PUT("categorias/{id}")
-//    suspend fun updateCategoria(
-//        @Path("id") id: Int,
-//        @Body body: CategoriaUpdate
-//    ): Response<Categoria>
-
-
-//    @DELETE("categorias/{id}")
-//    suspend fun deleteCategoria(@Path("id") id: Int): Response<Unit>
-    // En ApiService.kt, cambia los DELETE:
     @DELETE("categorias/{id}")
     suspend fun deleteCategoria(@Path("id") id: Int): Response<ApiResponse<Unit>>
-
-
 
     // ---------- NEGOCIOS ----------
     @GET("negocios")
     suspend fun getNegocios(
-        @Query("id_categoria") idCategoria: Int? = null,
-        @Query("id_ubicacion") idUbicacion: Int? = null,
+        // usa los nombres que tu backend espera
+        @Query("idCategoria") idCategoria: Int? = null,
+        @Query("idUbicacion") idUbicacion: Int? = null,
+
+        // nuevos filtros
         @Query("q") q: String? = null,
+        @Query("distrito") distrito: String? = null,
+        @Query("ciudad") ciudad: String? = null,
+        @Query("activos") activos: Boolean? = null,
+
+        // paginación (tu back espera pageSize)
         @Query("page") page: Int? = 1,
-        @Query("limit") limit: Int? = 20
+        @Query("pageSize") pageSize: Int? = 20
     ): Response<ApiResponse<PagedResponse<Negocio>>>
-
-
 
     @GET("negocios/{id}")
     suspend fun getNegocio(
         @Path("id") id: Int
-    ): Response<ApiResponse<Negocio>>   // 👈 aquí también
+    ): Response<ApiResponse<Negocio>>
 
     @POST("negocios")
     suspend fun createNegocio(@Body body: NegocioCreate): Response<ApiResponse<Negocio>>
@@ -122,19 +99,16 @@ interface ApiService {
     @DELETE("negocios/{id}")
     suspend fun deleteNegocio(@Path("id") id: Int): Response<Unit>
 
-
     // ---------- NEGOCIO-IMAGENES (subir/borrar) ----------
     @GET("negocio-imagenes")
     suspend fun listarNegocioImagenes(
         @Query("negocioId") negocioId: Long
     ): Response<List<NegocioImagen>>
 
-    // En ApiService
     @GET("negocios/{id}")
     suspend fun getNegocioDetalle(
         @Path("id") id: Int
     ): Response<ApiResponse<NegocioResponse>>
-
 
     @Multipart
     @POST("negocio-imagenes")
@@ -148,50 +122,41 @@ interface ApiService {
     suspend fun eliminarNegocioImagen(@Path("id") id: Long): Response<Unit>
 
     // ---------- SERVICIOS ----------
-
     @GET("servicios")
     suspend fun getServicios(
         @Query("id_negocio") idNegocio: Int? = null
     ): Response<ApiResponse<List<Servicio>>>
 
-
-
-    /** Obtener un servicio por id */
     @GET("servicios/{id}")
     suspend fun getServicio(
         @Path("id") id: Int
     ): Response<ApiResponse<Servicio>>
 
-    /** Crear servicio */
     @POST("servicios")
     suspend fun createServicio(
         @Body body: ServicioCreate
     ): Response<ApiResponse<Servicio>>
 
-    /** Actualizar servicio */
     @PUT("servicios/{id}")
     suspend fun updateServicio(
         @Path("id") id: Int,
         @Body body: ServicioUpdate
     ): Response<ApiResponse<Servicio>>
 
-    /** Eliminar servicio */
     @DELETE("servicios/{id}")
     suspend fun deleteServicio(
         @Path("id") id: Int
     ): Response<Unit>
 
-
     // ---------- HORARIOS ----------
     @GET("horarios")
     suspend fun getHorarios(
-        @Query("id_negocio") idNegocio: Int? = null // si tu back no lo soporta, quítalo
+        @Query("id_negocio") idNegocio: Int? = null
     ): Response<List<Horario>>
 
     @GET("horarios/{id}")
     suspend fun getHorario(@Path("id") id: Int): Response<Horario>
-    // En tu ApiService.kt, agrega estos endpoints:
-    // ApiService.kt - Asegúrate de que esté correcto
+
     @POST("horarios")
     suspend fun createHorario(@Body horario: HorarioCreate): Response<ApiResponse<Horario>>
 
@@ -201,10 +166,6 @@ interface ApiService {
     @GET("negocios/{id}/horarios")
     suspend fun getHorariosByNegocio(@Path("id") idNegocio: Int): Response<ApiResponse<List<Horario>>>
 
-
-    //    @POST("horarios")
-//    suspend fun createHorario(@Body body: HorarioCreate): Response<Horario>
-
     @PUT("horarios/{id}")
     suspend fun updateHorario(
         @Path("id") id: Int,
@@ -213,7 +174,6 @@ interface ApiService {
 
     @DELETE("horarios/{id}")
     suspend fun deleteHorario(@Path("id") id: Int): Response<Unit>
-
 
     // ---------- UBICACIONES ----------
     @GET("ubicaciones")
@@ -231,25 +191,8 @@ interface ApiService {
         @Body body: UbicacionUpdate
     ): Response<ApiResponse<Ubicacion>>
 
-//    @GET("ubicaciones")
-//    suspend fun getUbicaciones(): Response<List<Ubicacion>>
-//
-//    @GET("ubicaciones/{id}")
-//    suspend fun getUbicacion(@Path("id") id: Int): Response<Ubicacion>
-//
-//    @POST("ubicaciones")
-//    suspend fun createUbicacion(@Body body: UbicacionCreate): Response<Ubicacion>
-//
-//    @PUT("ubicaciones/{id}")
-//    suspend fun updateUbicacion(
-//        @Path("id") id: Int,
-//        @Body body: UbicacionUpdate
-//    ): Response<Ubicacion>
-
-//    @DELETE("ubicaciones/{id}")
-//    suspend fun deleteUbicacion(@Path("id") id: Int): Response<Unit>
-@DELETE("ubicaciones/{id}")
-suspend fun deleteUbicacion(@Path("id") id: Int): Response<ApiResponse<Unit>>
+    @DELETE("ubicaciones/{id}")
+    suspend fun deleteUbicacion(@Path("id") id: Int): Response<ApiResponse<Unit>>
 
     // ---------- RESEÑAS ----------
     @GET("resenas")
@@ -273,7 +216,6 @@ suspend fun deleteUbicacion(@Path("id") id: Int): Response<ApiResponse<Unit>>
     @DELETE("resenas/{id}")
     suspend fun deleteResena(@Path("id") id: Int): Response<Unit>
 
-
     // ---------- IMAGENES-RESENAS ----------
     @GET("imagenes-resenas")
     suspend fun getImagenesResena(
@@ -295,7 +237,6 @@ suspend fun deleteUbicacion(@Path("id") id: Int): Response<ApiResponse<Unit>>
     @DELETE("imagenes-resenas/{id}")
     suspend fun deleteImagenResena(@Path("id") id: Int): Response<Unit>
 
-
     // ---------- NEGOCIO-IMAGENES ----------
     @GET("negocio-imagenes")
     suspend fun getNegocioImagenes(
@@ -316,10 +257,11 @@ suspend fun deleteUbicacion(@Path("id") id: Int): Response<ApiResponse<Unit>>
 
     @DELETE("negocio-imagenes/{id}")
     suspend fun deleteNegocioImagen(@Path("id") id: Int): Response<Unit>
+
     // ---------- MENSAJES ----------
     @GET("mensajes")
     suspend fun getMensajes(
-        @Query("id_usuario") idUsuario: Int? = null   // filtro opcional por usuario
+        @Query("id_usuario") idUsuario: Int? = null
     ): Response<List<Mensaje>>
 
     @GET("mensajes/{id}")
@@ -337,9 +279,7 @@ suspend fun deleteUbicacion(@Path("id") id: Int): Response<ApiResponse<Unit>>
     @DELETE("mensajes/{id}")
     suspend fun deleteMensaje(@Path("id") id: Int): Response<Unit>
 
-
     // ---------- SERVICIOS - SUBIR IMAGEN ----------
-
     @Multipart
     @POST("servicios/{id}/imagen")
     suspend fun uploadServiceImage(
@@ -350,13 +290,7 @@ suspend fun deleteUbicacion(@Path("id") id: Int): Response<ApiResponse<Unit>>
     @GET("negocios/mio")
     suspend fun getMiNegocio(): Response<ApiResponse<Negocio>>
 
-    // ---------- FILTRO DE SERVICIOS (para el chatbot) ----------
-    // POST /api/filtrar-servicios  (usa el request que creamos)
+    // ---------- FILTRO DE SERVICIOS (chatbot) ----------
     @POST("filtrar-servicios")
     suspend fun filterServicios(@Body body: com.tesis.appmovil.data.remote.ServicioFilterRequest): Response<com.tesis.appmovil.data.remote.ApiResponse<List<com.tesis.appmovil.models.Servicio>>>
-
-
-//    @POST("servicios/filter")
-//    suspend fun filterServicios(@Body request: ServicioFilterRequest): Response<ApiResponse<List<Servicio>>>
-
 }
