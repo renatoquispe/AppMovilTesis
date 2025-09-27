@@ -37,17 +37,23 @@ import coil.request.ImageRequest
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.tesis.appmovil.viewmodel.NegocioImagenViewModel
 import com.tesis.appmovil.viewmodel.NegocioViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun BusinessImagesScreen(
     negocioViewModel: NegocioViewModel, // ← Agregar este parámetro
+    negocioImagenViewModel: NegocioImagenViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), // 👈 aquí lo inyectas
+
     onContinue: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     var selectedImages by remember { mutableStateOf<List<Uri>>(emptyList()) }
+//    val uiState by negocioViewModel.ui.collectAsState()
+    val uiState by negocioViewModel.ui.collectAsState()
+
 
     // Estado para el permiso de lectura de almacenamiento
     val permissionState = rememberPermissionState(
@@ -309,16 +315,39 @@ fun BusinessImagesScreen(
 
         // Botón continuar
         Button(
-            onClick = { onContinue() },
+            onClick = {
+                val negocioId = uiState.negocioCreadoId ?: uiState.seleccionado?.id_negocio
+                if (negocioId != null) {
+                    negocioImagenViewModel.subirImagenes( // 👈 Llamas al método de la instancia
+                        context,
+                        negocioId,
+                        selectedImages
+                    )
+                    onContinue()
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             shape = CircleShape,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5C1349)),
-            enabled = selectedImages.size >= 2 // Habilitar solo si hay al menos 2 imágenes
+            enabled = selectedImages.size >= 2
         ) {
             Text("CONTINUAR →")
         }
+
+
+//        Button(
+//            onClick = { onContinue() },
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(56.dp),
+//            shape = CircleShape,
+//            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5C1349)),
+//            enabled = selectedImages.size >= 2 // Habilitar solo si hay al menos 2 imágenes
+//        ) {
+//            Text("CONTINUAR →")
+//        }
     }
 }
 

@@ -8,10 +8,31 @@ import com.tesis.appmovil.data.remote.dto.NegocioImagenUpdate
 import com.tesis.appmovil.models.NegocioImagen
 import retrofit2.HttpException
 import retrofit2.Response
-
+import android.content.Context
+import android.net.Uri
+import com.tesis.appmovil.utils.uriToMultipart
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 class NegocioImagenRepository(
     private val api: ApiService = RetrofitClient.api
 ) {
+    suspend fun subirImagen(
+        context: Context,
+        negocioId: Int,
+        uri: Uri,
+        descripcion: String? = null
+    ): NegocioImagen {
+        val imagenPart = uriToMultipart(context, uri)
+
+        val negocioIdBody = negocioId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+        val descripcionBody = descripcion?.toRequestBody("text/plain".toMediaTypeOrNull())
+
+        return api.subirNegocioImagen(
+            idNegocio = negocioIdBody,
+            imagen = imagenPart,
+            descripcion = descripcionBody
+        ).bodyOrThrow()
+    }
     /** Lista imágenes; opcionalmente filtra por id_negocio */
     suspend fun listar(idNegocio: Int? = null): List<NegocioImagen> =
         api.getNegocioImagenes(idNegocio).bodyOrThrow()

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import com.tesis.appmovil.models.Negocio
 
 import androidx.compose.ui.platform.LocalContext
 
@@ -33,6 +34,7 @@ fun MasBuscadosSection(
     imageByNombre: Map<String, String> = emptyMap(),
     /** Qué hacer al tocar un negocio (se envía el propio objeto) */
     onClick: (com.tesis.appmovil.models.Negocio) -> Unit
+
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text(
@@ -54,6 +56,7 @@ fun MasBuscadosSection(
                 items = negocios,
                 key = { index, item -> "${item.nombre}#$index" } // clave estable sin depender de id
             ) { _, negocio ->
+
                 val imagen = imageByNombre[negocio.nombre]
                     ?: "https://via.placeholder.com/96x96.png?text=%20"
 

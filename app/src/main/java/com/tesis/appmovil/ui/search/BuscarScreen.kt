@@ -50,17 +50,26 @@ fun BuscarScreen(
     }
 
     // Imagen por nombre (tarjetas)
-    val imageByNombre by remember(serviciosState.servicios) {
-        mutableStateOf(
-            serviciosState.servicios
-                .groupBy { it.negocio.nombre }
-                .mapValues { (_, lista) ->
-                    lista.firstNotNullOfOrNull { it.negocio.imagenes?.firstOrNull()?.urlImagen }
-                        ?: lista.firstNotNullOfOrNull { it.imagenUrl }
-                        ?: ""
-                }
-        )
+//    val imageByNombre by remember(serviciosState.servicios) {
+//        mutableStateOf(
+//            serviciosState.servicios
+//                .groupBy { it.negocio.nombre }
+//                .mapValues { (_, lista) ->
+//                    lista.firstNotNullOfOrNull { it.negocio.imagenes?.firstOrNull()?.urlImagen }
+//                        ?: lista.firstNotNullOfOrNull { it.imagenUrl }
+//                        ?: ""
+//                }
+//        )
+//    }
+    val imageByNegocio by remember {
+        derivedStateOf {
+            state.negocios.associate { negocio ->
+                negocio.nombre to (negocio.imagenes?.firstOrNull()?.url_imagen ?: "")
+            }
+        }
     }
+
+
 
     // --------- FILTRO LOCAL (fallback, NO tocar) ----------
     val query = remember(state.query) { state.query.trim() }
@@ -149,15 +158,18 @@ fun BuscarScreen(
                     MasBuscadosSection(
                         title = titulo,
                         negocios = negociosFiltrados, // <- filtrados
-                        imageByNombre = imageByNombre,
-                        onClick = { negocio ->
-                            val idDestino = serviciosState.servicios.firstNotNullOfOrNull { s ->
-                                if (s.negocio.nombre == negocio.nombre)
-                                    s.idNegocio.takeIf { it > 0 } ?: s.negocio.idNegocio
-                                else null
-                            } ?: 0
-                            if (idDestino > 0) onClickNegocio(idDestino)
-                        }
+//                        imageByNombre = imageByNombre,
+                        imageByNombre = imageByNegocio, // <- aquí cambiamos
+                        onClick = { negocio -> onClickNegocio(negocio.id_negocio) }
+
+//                        onClick = { negocio ->
+//                            val idDestino = serviciosState.servicios.firstNotNullOfOrNull { s ->
+//                                if (s.negocio.nombre == negocio.nombre)
+//                                    s.idNegocio.takeIf { it > 0 } ?: s.negocio.idNegocio
+//                                else null
+//                            } ?: 0
+//                            if (idDestino > 0) onClickNegocio(idDestino)
+//                        }
                     )
                 }
             }

@@ -1,10 +1,13 @@
 package com.tesis.appmovil.models
 
+import com.google.gson.annotations.SerializedName
+import java.util.Date
+
 data class NegocioImagen(
-    val id_imagen: Int,
-    val id_negocio: Int,
-    val url_imagen: String,
+    @SerializedName("idImagen") val id_imagen: Int,
+    @SerializedName("urlImagen") val url_imagen: String,
+    @SerializedName("idNegocio") val id_negocio: Int,
     val descripcion: String?,
-    val fecha_subida: String,   // "YYYY-MM-DDTHH:mm:ss" como String es lo más seguro
-    val estado: Boolean
+    @SerializedName("fechaSubida") val fecha_subida: Date?,
+    val estado: Int
 )

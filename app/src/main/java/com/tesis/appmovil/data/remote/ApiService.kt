@@ -110,10 +110,18 @@ interface ApiService {
         @Path("id") id: Int
     ): Response<ApiResponse<NegocioResponse>>
 
+//    @Multipart
+//    @POST("negocio-imagenes")
+//    suspend fun subirNegocioImagen(
+//        @Part("negocioId") negocioId: RequestBody,
+//        @Part imagen: MultipartBody.Part,
+//        @Part("descripcion") descripcion: RequestBody? = null
+//    ): Response<NegocioImagen>
+
     @Multipart
-    @POST("negocio-imagenes")
+    @POST("negocio-imagenes/upload")
     suspend fun subirNegocioImagen(
-        @Part("negocioId") negocioId: RequestBody,
+        @Part("idNegocio") idNegocio: RequestBody,
         @Part imagen: MultipartBody.Part,
         @Part("descripcion") descripcion: RequestBody? = null
     ): Response<NegocioImagen>
@@ -245,6 +253,7 @@ interface ApiService {
 
     @GET("negocio-imagenes/{id}")
     suspend fun getNegocioImagen(@Path("id") id: Int): Response<NegocioImagen>
+
 
     @POST("negocio-imagenes")
     suspend fun createNegocioImagen(@Body body: NegocioImagenCreate): Response<NegocioImagen>

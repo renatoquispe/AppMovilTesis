@@ -1,6 +1,8 @@
 // NegocioImagenViewModel.kt
 package com.tesis.appmovil.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tesis.appmovil.models.NegocioImagen
@@ -26,6 +28,22 @@ class NegocioImagenViewModel(
 
     private val _ui = MutableStateFlow(NegocioImagenUiState())
     val ui: StateFlow<NegocioImagenUiState> = _ui
+
+    fun subirImagenes(context: Context, negocioId: Int, uris: List<Uri>) {
+        viewModelScope.launch {
+            _ui.update { it.copy(mutando = true, error = null) }
+            runCatching {
+                uris.map { uri -> repo.subirImagen(context, negocioId, uri) }
+            }
+                .onSuccess { nuevas ->
+                    val lista = _ui.value.imagenes.toMutableList().apply { addAll(nuevas) }
+                    _ui.update { it.copy(mutando = false, imagenes = lista) }
+                }
+                .onFailure { e ->
+                    _ui.update { it.copy(mutando = false, error = e.message ?: "Error al subir imágenes") }
+                }
+        }
+    }
 
     /** Listar (opcionalmente por id_negocio) */
     fun cargarImagenes(idNegocio: Int? = null) {
