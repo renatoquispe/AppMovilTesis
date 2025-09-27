@@ -19,6 +19,9 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.tesis.appmovil.viewmodel.NegocioViewModel
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -41,6 +44,10 @@ fun BusinessLocationScreen(
     val locationPermissionState = rememberPermissionState(
         Manifest.permission.ACCESS_FINE_LOCATION
     )
+
+    val scope = rememberCoroutineScope()
+    val ui by negocioViewModel.ui.collectAsState()
+
 
     // Modal de instrucciones inicial
     if (showInstructions) {
@@ -108,8 +115,32 @@ fun BusinessLocationScreen(
             ) {
                 Button(
                     onClick = {
-                        selectedLocation?.let { onLocationSelected(it) }
-                    },
+                        val latLng = selectedLocation
+                        if (latLng == null) return@Button
+
+                        // Tomamos el id desde el VM: primero el recién creado, si no, el seleccionado
+                        val idNegocio = ui.negocioCreadoId ?: ui.seleccionado?.id_negocio
+                        if (idNegocio == null) {
+                            // Si no tenemos id, muestra un log o snackbar
+                            println("❌ No se encontró idNegocio en el ViewModel (negocioCreadoId/seleccionado)")
+                            return@Button
+                        }
+
+                        scope.launch {
+                            val r = negocioViewModel.actualizarUbicacionExacta(
+                                idNegocio = idNegocio,
+                                latitud = latLng.latitude,
+                                longitud = latLng.longitude
+                            )
+                            if (r.isSuccess) {
+                                // Notifica arriba o navega al siguiente paso
+                                onLocationSelected(latLng)
+                            } else {
+                                println("❌ Error al guardar ubicación: ${r.exceptionOrNull()?.message}")
+                            }
+                        }
+                    }
+                    ,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp) // Botón más alto
