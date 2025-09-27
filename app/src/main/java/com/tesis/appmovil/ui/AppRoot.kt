@@ -1,6 +1,7 @@
 package com.tesis.appmovil.ui
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Store
@@ -11,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
@@ -25,6 +27,15 @@ import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.ui.search.BuscarScreen
 import com.tesis.appmovil.ui.servicios.EditServiceScreen
 import com.tesis.appmovil.viewmodel.*
+
+// ---- Lottie para el FAB del chatbot (igual al de Home) ----
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.tesis.appmovil.R
+// -----------------------------------------------------------
 
 // ----------------- Rutas -----------------
 sealed class Dest(
@@ -57,16 +68,13 @@ sealed class Dest(
 @Composable
 fun AppRoot() {
     val nav = rememberNavController()
-
     NavHost(navController = nav, startDestination = "main") {
-        composable("main") {
-            MainWithBottomBar()
-        }
+        composable("main") { MainWithBottomBar() }
     }
 }
 
 /**
- * Bottom bar con 3 pestañas persistentes - VERSIÓN DEFINITIVA
+ * Bottom bar con 3 pestañas persistentes - con FAB global del ChatBot
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,6 +101,9 @@ fun MainWithBottomBar() {
         "registerBusinessFlow"
     )
     val showBottomBar = current !in hideBottomBarRoutes
+
+    // Mostrar FAB del chatbot solo en Home y Buscar
+    val showChatFab = current == Dest.Home.route || current == Dest.Search.route
 
     Scaffold(
         topBar = {
@@ -126,6 +137,9 @@ fun MainWithBottomBar() {
                         NavigationBarItem(
                             selected = current == d.route,
                             onClick = {
+                                // 🔽 Cierra el ChatBot si estaba abierto (en cualquier pestaña)
+                                innerNav.popBackStack("chatbot", inclusive = true)
+
                                 innerNav.navigate(d.route) {
                                     popUpTo(innerNav.graph.startDestinationId) { saveState = true }
                                     launchSingleTop = true
@@ -135,10 +149,35 @@ fun MainWithBottomBar() {
                             icon = { d.icon?.let { Icon(it, contentDescription = d.label) } },
                             label = { Text(d.label) }
                         )
+
                     }
                 }
             }
-        }
+        },
+        floatingActionButton = {
+            if (showChatFab) {
+                FloatingActionButton(
+                    onClick = { innerNav.navigate("chatbot") { launchSingleTop = true } },
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 8.dp
+                    )
+                ) {
+                    val comp by rememberLottieComposition(
+                        LottieCompositionSpec.RawRes(R.raw.bellabot)
+                    )
+                    val progress by animateLottieCompositionAsState(
+                        composition = comp,
+                        iterations = LottieConstants.IterateForever
+                    )
+                    LottieAnimation(composition = comp, progress = { progress }, modifier = Modifier.size(64.dp))
+                }
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End
     ) { padding ->
         NavHost(
             navController = innerNav,
@@ -181,13 +220,11 @@ fun MainWithBottomBar() {
                 )
             }
 
-            // EN AppRoot - CORREGIR LA NAVEGACIÓN
+            // REGISTER
             composable(Dest.Register.route) {
                 RegisterScreen(
                     vm = authViewModel,
                     onSuccess = {
-                        // ✅ DEBE IR AL LOGIN, NO AL BUSINESS
-                        println("🔄 Registro exitoso - Navegando a Login")
                         innerNav.navigate(Dest.Login.route) {
                             popUpTo(Dest.Register.route) { inclusive = true }
                         }
@@ -200,59 +237,23 @@ fun MainWithBottomBar() {
                 )
             }
 
+            // LOGIN
             composable(Dest.Login.route) {
                 LoginScreen(
                     vm = authViewModel,
                     onSuccess = {
-                        // ✅ Verificar que tenemos token antes de navegar
                         if (!authViewModel.uiState.value.token.isNullOrEmpty()) {
-                            println("✅ Login exitoso - Navegando a registrar negocio")
                             innerNav.navigate("registerBusinessFlow") {
-                                // Limpiar stack para empezar fresco
                                 popUpTo(Dest.Login.route) { inclusive = true }
                             }
-                        } else {
-                            println("❌ ERROR: Login exitoso pero sin token")
                         }
                     },
-                    onNavigateToRegister = {
-                        innerNav.navigate(Dest.Register.route)
-                    }
+                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
                 )
             }
-            // --- RUTA PÚBLICA DEL CHATBOT ---
-            // Al navegar a "chatbot" se mostrará la pantalla ChatBotScreen() que creamos.
-            // Para abrirla desde cualquier botón: innerNav.navigate("chatbot")
-            composable("chatbot") {
-                ChatBotScreen()
-            }
-            // --- FIN RUTA CHATBOT ---
 
-//            composable(Dest.Login.route) {
-//                LoginScreen(
-//                    vm = authViewModel,
-//                    onSuccess = { innerNav.navigate("registerBusinessFlow") },
-//                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
-//                )
-//            }
-
-            // REGISTER USER - CORREGIDO
-
-//            composable(Dest.Register.route) {
-//                RegisterScreen(
-//                    vm = authViewModel,
-//                    onSuccess = {
-//                        innerNav.navigate(Dest.Business.route) {
-//                            popUpTo(Dest.Register.route) { inclusive = true }
-//                        }
-//                    },
-//                    onNavigateToLogin = {
-//                        innerNav.navigate(Dest.Login.route) {
-//                            popUpTo(Dest.Register.route) { inclusive = true }
-//                        }
-//                    }
-//                )
-//            }
+            // CHATBOT (ruta pública)
+            composable("chatbot") { ChatBotScreen() }
 
             // SUBNAVEGACIÓN DEL REGISTRO DE NEGOCIO
             navigation(
@@ -264,7 +265,6 @@ fun MainWithBottomBar() {
                         innerNav.getBackStackEntry("registerBusinessFlow")
                     }
                     val negocioVM: NegocioViewModel = viewModel(parentEntry)
-
                     RegisterBusinessScreen(
                         authViewModel = authViewModel,
                         negocioViewModel = negocioVM,
@@ -282,7 +282,6 @@ fun MainWithBottomBar() {
                         innerNav.getBackStackEntry("registerBusinessFlow")
                     }
                     val negocioVM: NegocioViewModel = viewModel(parentEntry)
-
                     BusinessContactInfoScreen(
                         negocioViewModel = negocioVM,
                         onContinue = { innerNav.navigate(Dest.BusinessSchedule.route) },
@@ -295,7 +294,6 @@ fun MainWithBottomBar() {
                         innerNav.getBackStackEntry("registerBusinessFlow")
                     }
                     val negocioVM: NegocioViewModel = viewModel(parentEntry)
-
                     BusinessScheduleScreen(
                         negocioViewModel = negocioVM,
                         onContinue = { innerNav.navigate(Dest.BusinessImages.route) },
@@ -308,7 +306,6 @@ fun MainWithBottomBar() {
                         innerNav.getBackStackEntry("registerBusinessFlow")
                     }
                     val negocioVM: NegocioViewModel = viewModel(parentEntry)
-
                     BusinessImagesScreen(
                         negocioViewModel = negocioVM,
                         onContinue = { innerNav.navigate(Dest.BusinessLocation.route) },
@@ -321,7 +318,6 @@ fun MainWithBottomBar() {
                         innerNav.getBackStackEntry("registerBusinessFlow")
                     }
                     val negocioVM: NegocioViewModel = viewModel(parentEntry)
-
                     BusinessLocationScreen(
                         negocioViewModel = negocioVM,
                         onLocationSelected = { innerNav.navigate(Dest.BusinessDocuments.route) },
@@ -334,7 +330,6 @@ fun MainWithBottomBar() {
                         innerNav.getBackStackEntry("registerBusinessFlow")
                     }
                     val negocioVM: NegocioViewModel = viewModel(parentEntry)
-
                     BusinessDocumentsScreen(
                         negocioViewModel = negocioVM,
                         onContinue = { innerNav.navigate(Dest.BusinessReady.route) },
@@ -348,7 +343,6 @@ fun MainWithBottomBar() {
                         innerNav.getBackStackEntry("registerBusinessFlow")
                     }
                     val negocioVM: NegocioViewModel = viewModel(parentEntry)
-
                     BusinessReadyScreen(
                         negocioViewModel = negocioVM,
                         onPublish = {
@@ -373,6 +367,7 @@ fun MainWithBottomBar() {
         }
     }
 }
+
 
 //package com.tesis.appmovil.ui
 //
