@@ -23,6 +23,7 @@ import com.google.android.gms.tasks.OnCompleteListener
 import com.tesis.appmovil.R
 import com.tesis.appmovil.viewmodel.AuthViewModel
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.delay
 
 @Composable
 fun LoginScreen(
@@ -31,14 +32,17 @@ fun LoginScreen(
     onNavigateToRegister: () -> Unit
 ) {
     val state by vm.uiState.collectAsState()
+    val context = LocalContext.current
+    val activity = context as Activity
+
     // DEBUG
+
     LaunchedEffect(state.userId) {
         if (state.userId != null) {
             println("✅ LOGIN EXITOSO - UserId: ${state.userId}")
         }
     }
-    val context = LocalContext.current
-    val activity = context as Activity
+
 
     // 1) Configurar GoogleSignInClient (idToken + email)
     val gso = remember {
@@ -73,6 +77,7 @@ fun LoginScreen(
     }
 
     // Navegación por éxito
+
     LaunchedEffect(state.user) {
         if (state.user != null) onSuccess()
     }

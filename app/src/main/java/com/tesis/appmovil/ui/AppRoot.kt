@@ -1,5 +1,7 @@
 package com.tesis.appmovil.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -9,8 +11,11 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -35,6 +40,8 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.tesis.appmovil.R
+import com.tesis.appmovil.ui.servicios.ServiciosScreen
+
 // -----------------------------------------------------------
 
 // ----------------- Rutas -----------------
@@ -60,6 +67,11 @@ sealed class Dest(
     object Home : Dest("home", "Inicio", Icons.Outlined.Home)
     object Search : Dest("search", "Buscar", Icons.Outlined.Search)
     object Business : Dest("business", "Negocio", Icons.Default.Store)
+
+    //NEGOCIOS
+
+    object Servicios : Dest("servicios", "Servicios", Icons.Outlined.Home)
+
 }
 
 /**
@@ -98,6 +110,7 @@ fun MainWithBottomBar() {
         Dest.BusinessLocation.route,
         Dest.BusinessDocuments.route,
         Dest.BusinessReady.route,
+        Dest.Servicios.route, // 👈 NUEVO
         "registerBusinessFlow",
         "businessDetail/{idNegocio}",
         "chatbot"
@@ -217,10 +230,30 @@ fun MainWithBottomBar() {
             composable(Dest.Business.route) {
                 LoginScreen(
                     vm = authViewModel,
-                    onSuccess = { innerNav.navigate("registerBusinessFlow") },
+                    onSuccess = {
+                        val state = authViewModel.uiState.value
+                        if (state.hasBusiness) {
+                            innerNav.navigate(Dest.Servicios.route) {
+                                popUpTo(Dest.Business.route) { inclusive = true }
+                            }
+                        } else {
+                            innerNav.navigate("registerBusinessFlow") {
+                                popUpTo(Dest.Business.route) { inclusive = true }
+                            }
+                        }
+                    },
                     onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
                 )
             }
+
+
+//            composable(Dest.Business.route) {
+//                LoginScreen(
+//                    vm = authViewModel,
+//                    onSuccess = { innerNav.navigate("registerBusinessFlow") },
+//                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
+//                )
+//            }
 
             // REGISTER
             composable(Dest.Register.route) {
@@ -245,14 +278,37 @@ fun MainWithBottomBar() {
                     vm = authViewModel,
                     onSuccess = {
                         if (!authViewModel.uiState.value.token.isNullOrEmpty()) {
-                            innerNav.navigate("registerBusinessFlow") {
-                                popUpTo(Dest.Login.route) { inclusive = true }
+                            val state = authViewModel.uiState.value
+                            if (state.hasBusiness) {
+                                // ✅ Ya tiene negocio → va a servicios
+                                innerNav.navigate(Dest.Servicios.route) {
+                                    popUpTo(Dest.Login.route) { inclusive = true }
+                                }
+                            } else {
+                                // 🚀 No tiene → va a registrar negocio
+                                innerNav.navigate("registerBusinessFlow") {
+                                    popUpTo(Dest.Login.route) { inclusive = true }
+                                }
                             }
                         }
                     },
                     onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
                 )
             }
+
+//            composable(Dest.Login.route) {
+//                LoginScreen(
+//                    vm = authViewModel,
+//                    onSuccess = {
+//                        if (!authViewModel.uiState.value.token.isNullOrEmpty()) {
+//                            innerNav.navigate("registerBusinessFlow") {
+//                                popUpTo(Dest.Login.route) { inclusive = true }
+//                            }
+//                        }
+//                    },
+//                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
+//                )
+//            }
 
             // CHATBOT (ruta pública)
             composable("chatbot") { ChatBotScreen() }
@@ -357,6 +413,24 @@ fun MainWithBottomBar() {
                 }
             }
 
+            composable(Dest.Servicios.route) {
+                val vm: ServicioViewModel = viewModel()
+                ServiciosScreen(
+                    vm = vm,
+                    navController = innerNav,
+                    negocioId = authViewModel.uiState.value.negocioId ?: 0, // ✅ negocio real, no userId
+                    onAdd = { innerNav.navigate("editService/0") }
+                )
+
+//                ServiciosScreen(
+//                    vm = vm,
+//                    navController = innerNav,
+//                    negocioId = authViewModel.uiState.value.userId ?: 0, // o el idNegocio real si lo tienes
+//                    onAdd = { innerNav.navigate("editService/0") }
+//                )
+            }
+
+
             // EDIT SERVICE
             composable(
                 route = "editService/{id}",
@@ -366,6 +440,7 @@ fun MainWithBottomBar() {
                 val vm: ServicioViewModel = viewModel()
                 EditServiceScreen(servicioId = id, vm = vm, navController = innerNav)
             }
+
         }
     }
 }

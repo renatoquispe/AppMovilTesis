@@ -13,5 +13,6 @@ data class Data(
 
 data class UsuarioData(
     val idUsuario: Int,
-    val correo: String
+    val correo: String,
+    val negocioId: Int?
 )
