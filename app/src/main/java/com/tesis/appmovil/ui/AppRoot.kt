@@ -40,6 +40,7 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.tesis.appmovil.R
+import com.tesis.appmovil.ui.servicios.CreateServiceScreen
 import com.tesis.appmovil.ui.servicios.ServiciosScreen
 
 // -----------------------------------------------------------
@@ -113,7 +114,9 @@ fun MainWithBottomBar() {
         Dest.Servicios.route, // 👈 NUEVO
         "registerBusinessFlow",
         "businessDetail/{idNegocio}",
-        "chatbot"
+        "chatbot",
+        "editService/{id}",
+        "createService/{negocioId}"
     )
     val showBottomBar = current !in hideBottomBarRoutes
 
@@ -414,7 +417,15 @@ fun MainWithBottomBar() {
             }
 
             composable(Dest.Servicios.route) {
+                val authState by authViewModel.uiState.collectAsState()
                 val vm: ServicioViewModel = viewModel()
+                // DEBUG de la navegación
+                LaunchedEffect(authState.negocioId) {
+                    println("🔍 DEBUG MainWithBottomBar - Navegando a Servicios:")
+                    println("   - authState.negocioId: ${authState.negocioId}")
+                    println("   - authState.hasBusiness: ${authState.hasBusiness}")
+                    println("   - authState.userId: ${authState.userId}")
+                }
                 ServiciosScreen(
                     vm = vm,
                     navController = innerNav,
@@ -439,6 +450,15 @@ fun MainWithBottomBar() {
                 val id = backStackEntry.arguments?.getInt("id") ?: 0
                 val vm: ServicioViewModel = viewModel()
                 EditServiceScreen(servicioId = id, vm = vm, navController = innerNav)
+            }
+            // En tu NavHost dentro de MainWithBottomBar
+            composable(
+                route = "createService/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val negocioId = backStackEntry.arguments?.getInt("negocioId") ?: 0
+                val vm: ServicioViewModel = viewModel()
+                CreateServiceScreen(negocioId = negocioId, vm = vm, navController = innerNav)
             }
 
         }

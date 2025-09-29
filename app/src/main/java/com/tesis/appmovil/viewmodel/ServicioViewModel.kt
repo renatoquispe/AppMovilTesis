@@ -43,22 +43,95 @@ class ServicioViewModel(
     }
 
     /** Crear (con o sin imagen Multipart ya preparada) */
-    fun crearYSubirImagen(dto: ServicioCreate, imagenPart: MultipartBody.Part? = null) = viewModelScope.launch {
+
+    // En ServicioViewModel.kt - ACTUALIZA esta función
+
+    // En ServicioViewModel.kt - AGREGAR ESTA FUNCIÓN
+    fun crearYSubirImagen(
+        dto: ServicioCreate,
+        imagenPart: MultipartBody.Part? = null,
+        onSuccess: (Servicio) -> Unit = {}
+    ) = viewModelScope.launch {
         _ui.update { it.copy(mutando = true, error = null) }
-        runCatching { repo.crearConImagen(dto, imagenPart) }
-            .onSuccess { creado ->
+        runCatching {
+            val servicioCreado = repo.crear(dto)
+
+            // Si hay imagen, subirla después de crear el servicio
+            if (imagenPart != null) {
+                repo.subirImagenServicio(servicioCreado.idServicio, imagenPart)
+            } else {
+                servicioCreado
+            }
+        }
+            .onSuccess { servicioFinal ->
                 _ui.update { current ->
                     current.copy(
                         mutando = false,
-                        servicios = replaceServicio(current.servicios, creado),
-                        seleccionado = creado
+                        servicios = replaceServicio(current.servicios, servicioFinal),
+                        seleccionado = servicioFinal
                     )
                 }
+                onSuccess(servicioFinal)
             }
             .onFailure { e ->
                 _ui.update { it.copy(mutando = false, error = e.message ?: "Error al crear servicio") }
             }
     }
+    //version 2
+//    fun crearYSubirImagen(
+//        dto: ServicioCreate,
+//        imagenPart: MultipartBody.Part? = null,
+//        onSuccess: (Servicio) -> Unit = {}
+//    ) = viewModelScope.launch {
+//        _ui.update { it.copy(mutando = true, error = null) }
+//        try {
+//            // 1. Primero crear el servicio
+//            val servicioCreado = repo.crear(dto)
+//
+//            // 2. Si hay imagen, subirla
+//            val servicioFinal = if (imagenPart != null) {
+//                repo.subirImagenServicio(servicioCreado.idServicio, imagenPart)
+//            } else {
+//                servicioCreado
+//            }
+//
+//            // 3. Actualizar UI
+//            _ui.update { current ->
+//                current.copy(
+//                    mutando = false,
+//                    servicios = replaceServicio(current.servicios, servicioFinal),
+//                    seleccionado = servicioFinal
+//                )
+//            }
+//
+//            // 4. Llamar el callback de éxito
+//            onSuccess(servicioFinal)
+//
+//        } catch (e: Exception) {
+//            _ui.update { it.copy(mutando = false, error = e.message ?: "Error al crear servicio") }
+//        }
+//    }
+
+
+
+
+    //version original
+//    fun crearYSubirImagen(dto: ServicioCreate, imagenPart: MultipartBody.Part? = null) = viewModelScope.launch {
+//        _ui.update { it.copy(mutando = true, error = null) }
+//        runCatching { repo.crearConImagen(dto, imagenPart) }
+//            .onSuccess { creado ->
+//                _ui.update { current ->
+//                    current.copy(
+//                        mutando = false,
+//                        servicios = replaceServicio(current.servicios, creado),
+//                        seleccionado = creado
+//                    )
+//                }
+//            }
+//            .onFailure { e ->
+//                _ui.update { it.copy(mutando = false, error = e.message ?: "Error al crear servicio") }
+//            }
+//    }
 
     /** Obtener detalle → la pantalla Edit usa ui.cargando */
     fun obtenerServicio(id: Int) = viewModelScope.launch {
@@ -120,18 +193,42 @@ class ServicioViewModel(
     }
 
     /** Subir imagen (Multipart) y refrescar el detalle */
+//    fun subirImagenServicio(idServicio: Int, imagenPart: MultipartBody.Part) = viewModelScope.launch {
+//        _ui.update { it.copy(mutando = true, error = null) }
+//        runCatching {
+//            repo.subirImagen(idServicio, imagenPart)   // upload
+//            repo.obtener(idServicio)                   // traer actualizado (con nueva imagenUrl)
+//        }
+//            .onSuccess { actualizado ->
+//                _ui.update { current ->
+//                    current.copy(
+//                        mutando = false,
+//                        servicios = replaceServicio(current.servicios, actualizado),
+//                        seleccionado = actualizado
+//                    )
+//                }
+//            }
+//            .onFailure { e ->
+//                _ui.update { it.copy(mutando = false, error = e.message ?: "Error al subir imagen") }
+//            }
+//    }
+
+    fun limpiarError() {
+        _ui.update { it.copy(error = null) }
+    }
+    // En ServicioViewModel.kt - AGREGAR ESTAS FUNCIONES
+
     fun subirImagenServicio(idServicio: Int, imagenPart: MultipartBody.Part) = viewModelScope.launch {
         _ui.update { it.copy(mutando = true, error = null) }
         runCatching {
-            repo.subirImagen(idServicio, imagenPart)   // upload
-            repo.obtener(idServicio)                   // traer actualizado (con nueva imagenUrl)
+            repo.subirImagenServicio(idServicio, imagenPart)
         }
-            .onSuccess { actualizado ->
+            .onSuccess { servicioActualizado ->
                 _ui.update { current ->
                     current.copy(
                         mutando = false,
-                        servicios = replaceServicio(current.servicios, actualizado),
-                        seleccionado = actualizado
+                        servicios = replaceServicio(current.servicios, servicioActualizado),
+                        seleccionado = servicioActualizado
                     )
                 }
             }
@@ -140,8 +237,23 @@ class ServicioViewModel(
             }
     }
 
-    fun limpiarError() {
-        _ui.update { it.copy(error = null) }
+    fun eliminarImagenServicio(idServicio: Int) = viewModelScope.launch {
+        _ui.update { it.copy(mutando = true, error = null) }
+        runCatching {
+            repo.eliminarImagenServicio(idServicio)
+        }
+            .onSuccess { servicioActualizado ->
+                _ui.update { current ->
+                    current.copy(
+                        mutando = false,
+                        servicios = replaceServicio(current.servicios, servicioActualizado),
+                        seleccionado = servicioActualizado
+                    )
+                }
+            }
+            .onFailure { e ->
+                _ui.update { it.copy(mutando = false, error = e.message ?: "Error al eliminar imagen") }
+            }
     }
 
     // ---------- Helpers ----------

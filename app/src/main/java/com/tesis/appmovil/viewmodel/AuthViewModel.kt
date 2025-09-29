@@ -137,6 +137,12 @@ class AuthViewModel : ViewModel() {
                     val body = response.body()!!
                     val userData = body.data!!.usuario
                     val token = body.data!!.token
+                    // DEBUG CRÍTICO
+                    println("🔍 DEBUG AuthViewModel - UserData completo:")
+                    println("   - idUsuario: ${userData.idUsuario}")
+                    println("   - correo: ${userData.correo}")
+                    println("   - negocioId: ${userData.negocioId}")
+                    println("   - tiene negocio: ${userData.negocioId != null}")
 
                     // 👇 YA NO LLAMES A usuarioTieneNegocio()
                     _uiState.value = _uiState.value.copy(

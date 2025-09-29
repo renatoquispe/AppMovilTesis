@@ -130,9 +130,13 @@ interface ApiService {
     suspend fun eliminarNegocioImagen(@Path("id") id: Long): Response<Unit>
 
     // ---------- SERVICIOS ----------
+//    @GET("servicios")
+//    suspend fun getServicios(
+//        @Query("id_negocio") idNegocio: Int? = null
+//    ): Response<ApiResponse<List<Servicio>>>
     @GET("servicios")
     suspend fun getServicios(
-        @Query("id_negocio") idNegocio: Int? = null
+        @Query("idNegocio") idNegocio: Int? = null  // 🔄 Cambiado a camelCase
     ): Response<ApiResponse<List<Servicio>>>
 
     @GET("servicios/{id}")
@@ -155,6 +159,20 @@ interface ApiService {
     suspend fun deleteServicio(
         @Path("id") id: Int
     ): Response<Unit>
+
+
+    @Multipart
+    @POST("servicios/{id}/imagen")
+    suspend fun uploadServiceImage(
+        @Path("id") id: Int,
+        @Part imagen: MultipartBody.Part
+    ): Response<ApiResponse<Servicio>>
+
+    // 👇 Para eliminar imagen de servicio
+    @DELETE("servicios/{id}/imagen")
+    suspend fun deleteServiceImage(
+        @Path("id") id: Int
+    ): Response<ApiResponse<Servicio>>
 
     // ---------- HORARIOS ----------
     @GET("horarios")
@@ -289,12 +307,12 @@ interface ApiService {
     suspend fun deleteMensaje(@Path("id") id: Int): Response<Unit>
 
     // ---------- SERVICIOS - SUBIR IMAGEN ----------
-    @Multipart
-    @POST("servicios/{id}/imagen")
-    suspend fun uploadServiceImage(
-        @Path("id") id: Int,
-        @Part imagen: MultipartBody.Part
-    ): Response<ApiResponse<Servicio>>
+//    @Multipart
+//    @POST("servicios/{id}/imagen")
+//    suspend fun uploadServiceImage(
+//        @Path("id") id: Int,
+//        @Part imagen: MultipartBody.Part
+//    ): Response<ApiResponse<Servicio>>
 
     @GET("negocios/mio")
     suspend fun getMiNegocio(): Response<ApiResponse<Negocio>>
