@@ -249,6 +249,8 @@ import androidx.compose.foundation.text.KeyboardActions
 // Para CameraUpdateFactory (Maps clásico)
 import com.google.android.gms.maps.CameraUpdateFactory
 
+import androidx.compose.runtime.collectAsState
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun BusinessLocationScreen(
@@ -273,6 +275,8 @@ fun BusinessLocationScreen(
     }
 
     val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+    // Leemos el estado del VM para obtener el id del negocio
+    val ui by negocioViewModel.ui.collectAsState()
 
     // Modal inicial
     if (showInstructions) {
@@ -348,7 +352,27 @@ fun BusinessLocationScreen(
                 onMapClick = { latLng ->
                     selectedLocation = latLng
                     searchError = null
+
+                    // ⬇️ Guardar en BD
+                    val idNegocio = ui.negocio?.id_negocio ?: ui.negocioCreadoId
+                    if (idNegocio != null) {
+                        scope.launch {
+                            val r = negocioViewModel.actualizarUbicacionExacta(
+                                idNegocio = idNegocio,
+                                latitud = latLng.latitude,
+                                longitud = latLng.longitude
+                            )
+                            if (r.isSuccess) {
+                                println("✅ Guardado por toque en mapa")
+                            } else {
+                                println("❌ Error guardando: ${r.exceptionOrNull()?.message}")
+                            }
+                        }
+                    } else {
+                        println("❌ idNegocio null (ui.negocio?.id_negocio / ui.negocioCreadoId)")
+                    }
                 }
+
             ) {
                 selectedLocation?.let { location ->
                     Marker(
@@ -411,18 +435,36 @@ fun BusinessLocationScreen(
                                         onResults = { list ->
                                             results = list
                                             if (list.isNotEmpty()) {
-                                                // Toma la primera coincidencia por defecto
                                                 val a = list.first()
                                                 val latLng = LatLng(a.latitude, a.longitude)
                                                 selectedLocation = latLng
                                                 scope.launch {
                                                     cameraPositionState.animate(
-                                                        update = CameraUpdateFactory.newLatLngZoom(latLng, 16f),
-                                                        durationMs = 600
+                                                        CameraUpdateFactory.newLatLngZoom(latLng, 16f)
                                                     )
+                                                }
+
+                                                // ⬇️ Guardar en BD
+                                                val idNegocio = ui.negocio?.id_negocio ?: ui.negocioCreadoId
+                                                if (idNegocio != null) {
+                                                    scope.launch {
+                                                        val r = negocioViewModel.actualizarUbicacionExacta(
+                                                            idNegocio = idNegocio,
+                                                            latitud = latLng.latitude,
+                                                            longitud = latLng.longitude
+                                                        )
+                                                        if (r.isSuccess) {
+                                                            println("✅ Guardado por búsqueda (1ª coincidencia)")
+                                                        } else {
+                                                            println("❌ Error guardando: ${r.exceptionOrNull()?.message}")
+                                                        }
+                                                    }
+                                                } else {
+                                                    println("❌ idNegocio null (ui.negocio?.id_negocio / ui.negocioCreadoId)")
                                                 }
                                             }
                                         }
+
                                     )
                                 }
                             }
@@ -457,13 +499,33 @@ fun BusinessLocationScreen(
                                             selectedLocation = latLng
                                             scope.launch {
                                                 cameraPositionState.animate(
-                                                    update = CameraUpdateFactory.newLatLngZoom(latLng, 16f),
-                                                    durationMs = 600
+                                                    CameraUpdateFactory.newLatLngZoom(latLng, 16f)
                                                 )
                                             }
+
+                                            // ⬇️ Guardar en BD
+                                            val idNegocio = ui.negocio?.id_negocio ?: ui.negocioCreadoId
+                                            if (idNegocio != null) {
+                                                scope.launch {
+                                                    val r = negocioViewModel.actualizarUbicacionExacta(
+                                                        idNegocio = idNegocio,
+                                                        latitud = latLng.latitude,
+                                                        longitud = latLng.longitude
+                                                    )
+                                                    if (r.isSuccess) {
+                                                        println("✅ Guardado por selección de resultado")
+                                                    } else {
+                                                        println("❌ Error guardando: ${r.exceptionOrNull()?.message}")
+                                                    }
+                                                }
+                                            } else {
+                                                println("❌ idNegocio null (ui.negocio?.id_negocio / ui.negocioCreadoId)")
+                                            }
+
                                             // Cerrar lista tras seleccionar
                                             results = emptyList()
                                         }
+
                                         .padding(12.dp)
                                 ) {
                                     Text(line, style = MaterialTheme.typography.bodyMedium)
