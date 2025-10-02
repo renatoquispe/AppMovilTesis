@@ -194,8 +194,7 @@ fun MainWithBottomBar() {
     ) { padding ->
         NavHost(
             navController = innerNav,
-            // 👇 Arranca directo en BusinessProfile con id 2
-            startDestination = "businessProfile/2",
+            startDestination = Dest.Home.route, // 👈 Ahora empieza en Home
             modifier = Modifier.padding(padding)
         ) {
             // HOME
@@ -506,6 +505,21 @@ fun MainWithBottomBar() {
                 BusinessEditSchedule(
                     negocioId = negocioId,
                     onBack = { innerNav.popBackStack() }
+                )
+            }
+
+
+
+            composable(
+                route = "servicios/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val negocioId = backStackEntry.arguments?.getInt("negocioId") ?: 0
+                val vm: ServicioViewModel = viewModel()
+                ServiciosScreen(
+                    vm = vm,
+                    navController = innerNav,
+                    negocioId = negocioId
                 )
             }
         }

@@ -38,6 +38,7 @@ import coil.compose.AsyncImage
 import com.tesis.appmovil.data.remote.dto.NegocioUpdate
 import com.tesis.appmovil.data.remote.request.NegocioResponse
 import com.tesis.appmovil.models.Negocio
+import com.tesis.appmovil.ui.components.BottomNavBar
 import com.tesis.appmovil.viewmodel.NegocioViewModel
 import kotlinx.coroutines.launch
 import java.util.*
@@ -76,24 +77,11 @@ fun BusinessProfileScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackHost) },
         bottomBar = {
-            Surface(shadowElevation = 8.dp) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    PillItem(Icons.Outlined.Home,  "Servicios", false) {
-                        navController?.navigate("servicios")
-                    }
-                    PillItem(Icons.Outlined.Store, "Negocio",   true ) {
-                        navController?.navigate("businessProfile/$negocioId")
-                    }
-                    PillItem(Icons.Filled.Person,  "Cuenta",    false) {
-                        /* nav to cuenta */
-                    }
-                }
-            }
+            BottomNavBar(
+                navController = navController!!,
+                negocioId = negocioId,
+                selected = "negocio"
+            )
         }
     ) { padding ->
         when {
