@@ -1,81 +1,146 @@
-//package com.tesis.appmovil.repository
-//
-//import com.tesis.appmovil.data.remote.ApiService
-//import com.tesis.appmovil.data.remote.RetrofitClient
-//import com.tesis.appmovil.data.remote.dto.HorarioCreate
-//import com.tesis.appmovil.data.remote.dto.HorarioUpdate
-//import com.tesis.appmovil.models.Horario
-//import retrofit2.HttpException
-//import retrofit2.Response
-//
-//class HorarioRepository(
-//    private val api: ApiService = RetrofitClient.api
-//) {
-//    suspend fun listar(idNegocio: Int? = null): List<Horario> =
-//        api.getHorarios(idNegocio).bodyOrThrow()
-//
-//    suspend fun obtener(id: Int): Horario =
-//        api.getHorario(id).bodyOrThrow()
-//
-//    suspend fun crear(body: HorarioCreate): Horario =
-//        api.createHorario(body).bodyOrThrow()
-//
-//    suspend fun actualizar(id: Int, body: HorarioUpdate): Horario =
-//        api.updateHorario(id, body).bodyOrThrow()
-//
-//    suspend fun eliminar(id: Int) {
-//        val resp = api.deleteHorario(id)
-//        if (!resp.isSuccessful) throw HttpException(resp)
-//    }
-//}
-//
-//private fun <T> Response<T>.bodyOrThrow(): T {
-//    if (isSuccessful) {
-//        val b = body()
-//        if (b != null) return b
-//    }
-//    throw HttpException(this)
-//}
-// repository/HorarioRepository.kt
 package com.tesis.appmovil.repository
 
 import HorarioCreate
+import HorarioUpdate
 import com.tesis.appmovil.data.remote.ApiService
 import com.tesis.appmovil.data.remote.RetrofitClient
 import com.tesis.appmovil.models.Horario
+import com.tesis.appmovil.viewmodel.HorarioUi
 
 class HorarioRepository(
     private val api: ApiService = RetrofitClient.api
 ) {
+    private fun Any?.toBool01(): Boolean = when (this) {
+        is Boolean -> this
+        is Number  -> this.toInt() == 1
+        is String  -> this == "1" || this.equals("true", ignoreCase = true)
+        else       -> false
+    }
+    /** Crea un horario (una fila) */
     suspend fun crearHorario(horario: HorarioCreate): Horario {
-        val response = api.createHorario(horario)
-        if (response.isSuccessful && response.body()?.success == true) {
-            return response.body()?.data ?: throw IllegalStateException("Horario creado pero sin datos de retorno")
-        } else {
-            throw Exception(response.body()?.message ?: "Error al crear horario")
+        val resp = api.createHorario(horario)
+        if (!resp.isSuccessful || resp.body()?.success != true) {
+            throw Exception(resp.body()?.message ?: "Error al crear horario (HTTP ${resp.code()})")
         }
+        return resp.body()?.data
+            ?: throw IllegalStateException("Horario creado pero sin datos de retorno")
     }
 
+    /** Crea varios horarios en lote (Lunes..Domingo, por ejemplo) */
     suspend fun crearHorariosLote(horarios: List<HorarioCreate>): List<Horario> {
-        val resultados = mutableListOf<Horario>()
-        for (horario in horarios) {
-            try {
-                val resultado = crearHorario(horario)
-                resultados.add(resultado)
-            } catch (e: Exception) {
-                println("❌ Error creando horario para ${horario.diaSemana}: ${e.message}")
-                throw e // O puedes continuar con los demás: // continue
-            }
+        val creados = mutableListOf<Horario>()
+        for (h in horarios) {
+            val r = crearHorario(h)
+            creados += r
         }
-        return resultados
+        return creados
     }
 
+    /** Devuelve la lista de Horario (modelo de datos) de un negocio */
     suspend fun obtenerHorariosPorNegocio(idNegocio: Int): List<Horario> {
-        val response = api.getHorariosByNegocio(idNegocio)
-        if (response.isSuccessful) {
-            return response.body()?.data ?: emptyList()
+        val resp = api.getHorariosByNegocio(idNegocio)
+        if (!resp.isSuccessful || resp.body()?.success != true) {
+            throw Exception(resp.body()?.message ?: "Error al obtener horarios (HTTP ${resp.code()})")
+        }
+        return resp.body()?.data ?: emptyList()
+    }
+
+    /** Devuelve la lista ya mapeada al modelo de UI */
+    suspend fun getHorariosByNegocio(idNegocio: Int): List<HorarioUi> {
+        val resp = api.getHorariosByNegocio(idNegocio)
+        if (!resp.isSuccessful || resp.body()?.success != true) {
+            throw Exception(resp.body()?.message ?: "Error al obtener horarios (HTTP ${resp.code()})")
+        }
+        val data: List<Horario> = resp.body()?.data ?: emptyList()
+        return data.map { h ->
+            HorarioUi(
+                id           = h.idHorario ?: 0,
+                diaSemana    = h.diaSemana ?: "",
+                horaApertura = (h.horaApertura ?: "").take(5),
+                horaCierre   = (h.horaCierre ?: "").take(5),
+                // 👇 FIX: mapea estado_auditoria
+                habilitado   = (h.estado ?: h.estado ?: 0).toBool01()
+            )
+        }
+    }
+
+    suspend fun updateHorario(
+        id: Int,
+        horaApertura: String,
+        horaCierre: String
+    ): HorarioUi {
+        val body = HorarioUpdate(
+            hora_apertura = horaApertura,
+            hora_cierre   = horaCierre
+        )
+
+        val resp = api.updateHorario(id = id, body = body)
+        if (!resp.isSuccessful || resp.body()?.success != true) {
+            throw Exception(resp.body()?.message ?: "Error al actualizar horario (HTTP ${resp.code()})")
+        }
+
+        val h: Horario? = resp.body()?.data
+        return if (h != null) {
+            HorarioUi(
+                id           = h.idHorario ?: id,
+                diaSemana    = h.diaSemana ?: "",
+                horaApertura = (h.horaApertura ?: horaApertura).take(5),
+                horaCierre   = (h.horaCierre ?: horaCierre).take(5),
+                habilitado   = (h.estado ?: h.estado ?: 0).toBool01()
+            )
         } else {
-            throw Exception("Error al obtener horarios")
+            HorarioUi(
+                id           = id,
+                diaSemana    = "",
+                horaApertura = horaApertura.take(5),
+                horaCierre   = horaCierre.take(5),
+                habilitado   = true // fallback
+            )
+        }
+    }
+
+
+    suspend fun crearHorario(
+        negocioId: Int,
+        diaSemana: String,
+        horaApertura: String,
+        horaCierre: String
+    ): HorarioUi {
+        val body = HorarioCreate(
+            idNegocio = negocioId,
+            diaSemana = diaSemana,
+            horaApertura = horaApertura,
+            horaCierre = horaCierre
+        )
+
+        val resp = api.postHorario(body)
+        if (!resp.isSuccessful || resp.body()?.success != true) {
+            throw Exception(resp.body()?.message ?: "Error al crear horario (HTTP ${resp.code()})")
+        }
+
+        val h: Horario = resp.body()?.data
+            ?: throw IllegalStateException("Respuesta sin dato de horario creado")
+
+        return HorarioUi(
+            id           = h.idHorario ?: 0,
+            diaSemana    = h.diaSemana ?: "",
+            horaApertura = (h.horaApertura ?: horaApertura).take(5),
+            horaCierre   = (h.horaCierre ?: horaCierre).take(5),
+            habilitado   = (h.estado ?: h.estado ?: 1).toBool01()
+        )
+    }
+
+    suspend fun desactivarHorario(id: Int) {
+        val resp = api.desactivarHorario(id)
+        if (!resp.isSuccessful || resp.body()?.success != true) {
+            throw Exception(resp.body()?.message ?: "Error al desactivar horario")
+        }
+    }
+
+    suspend fun activarHorario(id: Int) {
+        val resp = api.activarHorario(id)
+        if (!resp.isSuccessful || resp.body()?.success != true) {
+            throw Exception(resp.body()?.message ?: "Error al activar horario")
         }
     }
 }

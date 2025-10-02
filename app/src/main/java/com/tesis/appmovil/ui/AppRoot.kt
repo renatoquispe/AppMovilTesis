@@ -26,16 +26,17 @@ import com.tesis.appmovil.ui.home.BusinessDetailScreen
 import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.ui.search.BuscarScreen
 import com.tesis.appmovil.ui.servicios.EditServiceScreen
+import com.tesis.appmovil.ui.servicios.BusinessProfileScreen
 import com.tesis.appmovil.viewmodel.*
 
-// ---- Lottie para el FAB del chatbot (igual al de Home) ----
+// ---- Lottie FAB ChatBot ----
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.tesis.appmovil.R
-// -----------------------------------------------------------
+// ----------------------------
 
 // ----------------- Rutas -----------------
 sealed class Dest(
@@ -62,20 +63,36 @@ sealed class Dest(
     object Business : Dest("business", "Negocio", Icons.Default.Store)
 }
 
-/**
- * Root del app
- */
+/** Root del app */
 @Composable
 fun AppRoot() {
     val nav = rememberNavController()
-    NavHost(navController = nav, startDestination = "main") {
-        composable("main") { MainWithBottomBar() }
+
+    NavHost(
+        navController = nav,
+        startDestination = "businessProfile/2"  // 👈 abre directo en el negocio 2
+    ) {
+        // BusinessProfile (forzado al id = 2 para pruebas)
+        composable("businessProfile/{negocioId}") {
+            val negocioId = 2
+            BusinessProfileScreen(
+                negocioId = negocioId,
+                navController = nav
+            )
+        }
+
+        // Horarios (forzado al id = 2 para pruebas)
+        composable("horarios/{negocioId}") {
+            val negocioId = 2
+            BusinessEditSchedule(
+                negocioId = negocioId,
+                onBack = { nav.popBackStack() }
+            )
+        }
     }
 }
 
-/**
- * Bottom bar con 3 pestañas persistentes - con FAB global del ChatBot
- */
+/** Bottom bar con 3 pestañas persistentes - con FAB global del ChatBot */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainWithBottomBar() {
@@ -100,6 +117,7 @@ fun MainWithBottomBar() {
         Dest.BusinessReady.route,
         "registerBusinessFlow",
         "businessDetail/{idNegocio}",
+        "businessProfile/{idNegocio}", // 👈 ocultamos bottom bar en BusinessProfile
         "chatbot"
     )
     val showBottomBar = current !in hideBottomBarRoutes
@@ -139,9 +157,8 @@ fun MainWithBottomBar() {
                         NavigationBarItem(
                             selected = current == d.route,
                             onClick = {
-                                // 🔽 Cierra el ChatBot si estaba abierto (en cualquier pestaña)
+                                // Cierra el ChatBot si estaba abierto
                                 innerNav.popBackStack("chatbot", inclusive = true)
-
                                 innerNav.navigate(d.route) {
                                     popUpTo(innerNav.graph.startDestinationId) { saveState = true }
                                     launchSingleTop = true
@@ -151,7 +168,6 @@ fun MainWithBottomBar() {
                             icon = { d.icon?.let { Icon(it, contentDescription = d.label) } },
                             label = { Text(d.label) }
                         )
-
                     }
                 }
             }
@@ -183,7 +199,8 @@ fun MainWithBottomBar() {
     ) { padding ->
         NavHost(
             navController = innerNav,
-            startDestination = Dest.Home.route,
+            // 👇 Arranca directo en BusinessProfile con id 2
+            startDestination = "businessProfile/2",
             modifier = Modifier.padding(padding)
         ) {
             // HOME
@@ -197,7 +214,7 @@ fun MainWithBottomBar() {
                 val vmNegocios: HomeNegocioViewModel = viewModel()
                 val vmServicios: ServicioViewModel = viewModel()
                 BuscarScreen(vmNegocios, vmServicios) { id ->
-                    if (id > 0) innerNav.navigate("businessDetail/$id")
+                    if (id > 1) innerNav.navigate("businessDetail/$id")
                 }
             }
 
@@ -206,14 +223,28 @@ fun MainWithBottomBar() {
                 route = "businessDetail/{idNegocio}",
                 arguments = listOf(navArgument("idNegocio") { type = NavType.IntType })
             ) { backStackEntry ->
-                val idNegocio = backStackEntry.arguments?.getInt("idNegocio") ?: 0
+                val idNegocio = backStackEntry.arguments?.getInt("idNegocio") ?: 1
                 val vm: NegocioViewModel = viewModel()
                 BusinessDetailScreen(idNegocio = idNegocio, vm = vm, onBack = {
                     innerNav.popBackStack()
                 })
             }
 
-            // BUSINESS - ESTA ES LA PANTALLA QUE MUESTRA EL LOGIN
+            // 👉 NUEVA RUTA: BusinessProfile
+            composable(
+                route = "businessProfile/{idNegocio}",
+                arguments = listOf(navArgument("idNegocio") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val idNegocio = backStackEntry.arguments?.getInt("idNegocio") ?: 1
+                val vm: NegocioViewModel = viewModel()
+                BusinessProfileScreen(
+                    negocioId = idNegocio,
+                    navController = innerNav,
+                    vm = vm
+                )
+            }
+
+            // BUSINESS - pantalla de login (mantengo tu flujo)
             composable(Dest.Business.route) {
                 LoginScreen(
                     vm = authViewModel,
@@ -254,7 +285,7 @@ fun MainWithBottomBar() {
                 )
             }
 
-            // CHATBOT (ruta pública)
+            // CHATBOT
             composable("chatbot") { ChatBotScreen() }
 
             // SUBNAVEGACIÓN DEL REGISTRO DE NEGOCIO
@@ -366,7 +397,18 @@ fun MainWithBottomBar() {
                 val vm: ServicioViewModel = viewModel()
                 EditServiceScreen(servicioId = id, vm = vm, navController = innerNav)
             }
+
+            composable(
+                route = "horarios/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val negocioId = backStackEntry.arguments?.getInt("negocioId") ?: 0
+                BusinessEditSchedule(
+                    negocioId = negocioId,
+                    onBack = { innerNav.popBackStack() }   // ← usa innerNav, no navController
+                )
+            }
+            
         }
     }
 }
-

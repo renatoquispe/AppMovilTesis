@@ -171,18 +171,27 @@ interface ApiService {
     @POST("horarios/lote")
     suspend fun createHorariosLote(@Body horarios: List<HorarioCreate>): Response<ApiResponse<List<Horario>>>
 
-    @GET("negocios/{id}/horarios")
-    suspend fun getHorariosByNegocio(@Path("id") idNegocio: Int): Response<ApiResponse<List<Horario>>>
+
+    @POST("horarios")
+    suspend fun postHorario(@Body body: HorarioCreate): Response<ApiResponse<Horario>>
+
+
+    @DELETE("horarios/{id}")
+    suspend fun desactivarHorario(@Path("id") id: Int): Response<ApiResponse<Unit>>
+
+    @GET("horarios/negocio/{idNegocio}")
+    suspend fun getHorariosByNegocio(
+        @Path("idNegocio") idNegocio: Int
+    ): Response<ApiResponse<List<Horario>>>
 
     @PUT("horarios/{id}")
     suspend fun updateHorario(
         @Path("id") id: Int,
         @Body body: HorarioUpdate
-    ): Response<Horario>
+    ): Response<ApiResponse<Horario>>
 
-    @DELETE("horarios/{id}")
-    suspend fun deleteHorario(@Path("id") id: Int): Response<Unit>
-
+    @POST("horarios/{id}/activar")
+    suspend fun activarHorario(@Path("id") id: Int): Response<ApiResponse<Unit>>
     // ---------- UBICACIONES ----------
     @GET("ubicaciones")
     suspend fun getUbicaciones(): Response<ApiResponse<List<Ubicacion>>>
@@ -303,3 +312,4 @@ interface ApiService {
     @POST("filtrar-servicios")
     suspend fun filterServicios(@Body body: com.tesis.appmovil.data.remote.ServicioFilterRequest): Response<com.tesis.appmovil.data.remote.ApiResponse<List<com.tesis.appmovil.models.Servicio>>>
 }
+
