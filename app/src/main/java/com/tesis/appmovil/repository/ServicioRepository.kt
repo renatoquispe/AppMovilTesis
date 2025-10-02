@@ -19,14 +19,28 @@ class ServicioRepository(
     /** Lista servicios; opcionalmente por negocio */
     suspend fun listar(idNegocio: Int? = null): List<Servicio> {
         try {
+            println("🔍 DEBUG ServicioRepository - listar con idNegocio: $idNegocio")
+            println("🔍 DEBUG ServicioRepository - llamando a api.getServicios($idNegocio)")
+
             val resp = api.getServicios(idNegocio)
+
+            println("🔍 DEBUG ServicioRepository - respuesta HTTP: ${resp.code()}")
+
             if (resp.isSuccessful) {
                 val body = resp.body()
-                if (body != null && (body as ApiResponse<*>).success && (body as ApiResponse<List<Servicio>>).data != null) {
+                println("🔍 DEBUG ServicioRepository - body success: ${body?.success}")
+                println("🔍 DEBUG ServicioRepository - body message: ${body?.message}")
+
+                if (body != null && body.success && body.data != null) {
                     @Suppress("UNCHECKED_CAST")
-                    return (body as ApiResponse<List<Servicio>>).data as List<Servicio>
+                    val servicios = body.data as List<Servicio>
+                    println("🔍 DEBUG ServicioRepository - servicios obtenidos: ${servicios.size}")
+                    servicios.forEach { servicio ->
+                        println("   - Servicio: ${servicio.nombre} (Negocio ID: ${servicio.idNegocio})")
+                    }
+                    return servicios
                 }
-                throw Exception(body?.let { (it as? ApiResponse<*>)?.message } ?: "Lista de servicios vacía o fallida")
+                throw Exception(body?.message ?: "Lista de servicios vacía o fallida")
             } else {
                 throw httpException(resp)
             }
@@ -35,16 +49,41 @@ class ServicioRepository(
             throw e
         }
     }
+//    suspend fun listar(idNegocio: Int? = null): List<Servicio> {
+//        try {
+//            val resp = api.getServicios(idNegocio)
+//            if (resp.isSuccessful) {
+//                val body = resp.body()
+//                if (body != null && (body as ApiResponse<*>).success && (body as ApiResponse<List<Servicio>>).data != null) {
+//                    @Suppress("UNCHECKED_CAST")
+//                    return (body as ApiResponse<List<Servicio>>).data as List<Servicio>
+//                }
+//                throw Exception(body?.let { (it as? ApiResponse<*>)?.message } ?: "Lista de servicios vacía o fallida")
+//            } else {
+//                throw httpException(resp)
+//            }
+//        } catch (e: Exception) {
+//            Log.e(TAG, "listar error", e)
+//            throw e
+//        }
+//    }
 
     /** Crea y devuelve el servicio creado */
+    // En ServicioRepository.kt - AGREGAR si no existe
     suspend fun crear(body: ServicioCreate): Servicio {
         try {
+            println("🔍 ServicioRepository - Creando servicio: ${body.nombre}")
+
             val resp = api.createServicio(body)
+
+            println("🔍 ServicioRepository - Respuesta HTTP: ${resp.code()}")
+
             if (resp.isSuccessful) {
                 val apiResp = resp.body()
+                println("🔍 ServicioRepository - body success: ${apiResp?.success}")
+
                 if (apiResp != null && apiResp.success && apiResp.data != null) {
-                    @Suppress("UNCHECKED_CAST")
-                    return apiResp.data as Servicio
+                    return apiResp.data
                 }
                 throw Exception(apiResp?.message ?: "Error al crear servicio")
             } else {
@@ -55,6 +94,24 @@ class ServicioRepository(
             throw e
         }
     }
+//    suspend fun crear(body: ServicioCreate): Servicio {
+//        try {
+//            val resp = api.createServicio(body)
+//            if (resp.isSuccessful) {
+//                val apiResp = resp.body()
+//                if (apiResp != null && apiResp.success && apiResp.data != null) {
+//                    @Suppress("UNCHECKED_CAST")
+//                    return apiResp.data as Servicio
+//                }
+//                throw Exception(apiResp?.message ?: "Error al crear servicio")
+//            } else {
+//                throw httpException(resp)
+//            }
+//        } catch (e: Exception) {
+//            Log.e(TAG, "crear error", e)
+//            throw e
+//        }
+//    }
 
     /**
      * Crea servicio y (opcional) sube imagen en un solo flujo.
@@ -166,6 +223,58 @@ class ServicioRepository(
             }
         } catch (e: Exception) {
             Log.e(TAG, "subirImagen error para id=$id", e)
+            throw e
+        }
+    }
+
+    // En ServicioRepository.kt - AGREGAR ESTAS FUNCIONES
+
+    suspend fun subirImagenServicio(idServicio: Int, imagenPart: MultipartBody.Part): Servicio {
+        try {
+            println("🔍 ServicioRepository - Subiendo imagen para servicio: $idServicio")
+
+            val resp = api.uploadServiceImage(idServicio, imagenPart)
+
+            println("🔍 ServicioRepository - Respuesta HTTP: ${resp.code()}")
+
+            if (resp.isSuccessful) {
+                val apiResp = resp.body()
+                println("🔍 ServicioRepository - body success: ${apiResp?.success}")
+
+                if (apiResp != null && apiResp.success && apiResp.data != null) {
+                    return apiResp.data
+                }
+                throw Exception(apiResp?.message ?: "Error al subir imagen")
+            } else {
+                throw httpException(resp)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "subirImagenServicio error para id=$idServicio", e)
+            throw e
+        }
+    }
+
+    suspend fun eliminarImagenServicio(idServicio: Int): Servicio {
+        try {
+            println("🔍 ServicioRepository - Eliminando imagen de servicio: $idServicio")
+
+            val resp = api.deleteServiceImage(idServicio)
+
+            println("🔍 ServicioRepository - Respuesta HTTP: ${resp.code()}")
+
+            if (resp.isSuccessful) {
+                val apiResp = resp.body()
+                println("🔍 ServicioRepository - body success: ${apiResp?.success}")
+
+                if (apiResp != null && apiResp.success && apiResp.data != null) {
+                    return apiResp.data
+                }
+                throw Exception(apiResp?.message ?: "Error al eliminar imagen")
+            } else {
+                throw httpException(resp)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "eliminarImagenServicio error para id=$idServicio", e)
             throw e
         }
     }

@@ -14,6 +14,7 @@ object RetrofitClient {
     private const val BASE_URL = "https://eight-peaches-brake.loca.lt/api/"
 
 
+
     private var tokenProvider: (() -> String?)? = null
 
     fun setTokenProvider(provider: () -> String?) {

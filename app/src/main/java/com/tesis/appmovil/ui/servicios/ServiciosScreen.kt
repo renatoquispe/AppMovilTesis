@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 fun ServiciosScreen(
     vm: ServicioViewModel,
     navController: NavController? = null,
-    negocioId: Int = 1,
+    negocioId: Int,
     onAdd: () -> Unit = {}
 ) {
     val state by vm.ui.collectAsState()
@@ -39,6 +39,20 @@ fun ServiciosScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // ⬇️ Estado para controlar la visibilidad del navbar
+    var hideNavbar by remember { mutableStateOf(false) }
+
+    // ⬇️ Escucha la señal para mostrar/ocultar navbar
+    val navbarSignal = navController?.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getStateFlow("hide_navbar", false)
+        ?.collectAsState()
+
+    LaunchedEffect(navbarSignal?.value) {
+        navbarSignal?.value?.let { shouldHide ->
+            hideNavbar = shouldHide
+        }
+    }
     // ⬇️ Escucha la señal para refrescar al volver desde Edit/Create
     val refreshSignal = navController?.currentBackStackEntry
         ?.savedStateHandle
@@ -90,7 +104,11 @@ fun ServiciosScreen(
             ExtendedFloatingActionButton(
                 text = { Text("Agregar") },
                 icon = { Icon(Icons.Outlined.Add, contentDescription = "Agregar") },
-                onClick = onAdd,
+//                onClick = onAdd,
+                onClick = {
+                    // 👇 Navegar a CreateServiceScreen en lugar de EditService
+                    navController?.navigate("createService/$negocioId")
+                },
                 shape = RoundedCornerShape(16.dp),
                 containerColor = MaterialTheme.colorScheme.surface,
                 elevation = FloatingActionButtonDefaults.elevation(4.dp)

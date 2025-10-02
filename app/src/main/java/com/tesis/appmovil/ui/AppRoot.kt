@@ -1,5 +1,7 @@
 package com.tesis.appmovil.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -9,8 +11,11 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,17 +31,20 @@ import com.tesis.appmovil.ui.home.BusinessDetailScreen
 import com.tesis.appmovil.ui.home.HomeScreen
 import com.tesis.appmovil.ui.search.BuscarScreen
 import com.tesis.appmovil.ui.servicios.EditServiceScreen
-import com.tesis.appmovil.ui.servicios.BusinessProfileScreen
 import com.tesis.appmovil.viewmodel.*
 
-// ---- Lottie FAB ChatBot ----
+// ---- Lottie para el FAB del chatbot (igual al de Home) ----
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.tesis.appmovil.R
-// ----------------------------
+import com.tesis.appmovil.ui.servicios.BusinessProfileScreen
+import com.tesis.appmovil.ui.servicios.CreateServiceScreen
+import com.tesis.appmovil.ui.servicios.ServiciosScreen
+
+// -----------------------------------------------------------
 
 // ----------------- Rutas -----------------
 sealed class Dest(
@@ -61,34 +69,19 @@ sealed class Dest(
     object Home : Dest("home", "Inicio", Icons.Outlined.Home)
     object Search : Dest("search", "Buscar", Icons.Outlined.Search)
     object Business : Dest("business", "Negocio", Icons.Default.Store)
+
+    //NEGOCIOS
+
+    object Servicios : Dest("servicios", "Servicios", Icons.Outlined.Home)
+
 }
 
 /** Root del app */
 @Composable
 fun AppRoot() {
     val nav = rememberNavController()
-
-    NavHost(
-        navController = nav,
-        startDestination = "businessProfile/2"  // 👈 abre directo en el negocio 2
-    ) {
-        // BusinessProfile (forzado al id = 2 para pruebas)
-        composable("businessProfile/{negocioId}") {
-            val negocioId = 2
-            BusinessProfileScreen(
-                negocioId = negocioId,
-                navController = nav
-            )
-        }
-
-        // Horarios (forzado al id = 2 para pruebas)
-        composable("horarios/{negocioId}") {
-            val negocioId = 2
-            BusinessEditSchedule(
-                negocioId = negocioId,
-                onBack = { nav.popBackStack() }
-            )
-        }
+    NavHost(navController = nav, startDestination = "main") {
+        composable("main") { MainWithBottomBar() }
     }
 }
 
@@ -115,10 +108,12 @@ fun MainWithBottomBar() {
         Dest.BusinessLocation.route,
         Dest.BusinessDocuments.route,
         Dest.BusinessReady.route,
+        Dest.Servicios.route, // 👈 NUEVO
         "registerBusinessFlow",
         "businessDetail/{idNegocio}",
-        "businessProfile/{idNegocio}", // 👈 ocultamos bottom bar en BusinessProfile
-        "chatbot"
+        "chatbot",
+        "editService/{id}",
+        "createService/{negocioId}"
     )
     val showBottomBar = current !in hideBottomBarRoutes
 
@@ -248,10 +243,30 @@ fun MainWithBottomBar() {
             composable(Dest.Business.route) {
                 LoginScreen(
                     vm = authViewModel,
-                    onSuccess = { innerNav.navigate("registerBusinessFlow") },
+                    onSuccess = {
+                        val state = authViewModel.uiState.value
+                        if (state.hasBusiness) {
+                            innerNav.navigate(Dest.Servicios.route) {
+                                popUpTo(Dest.Business.route) { inclusive = true }
+                            }
+                        } else {
+                            innerNav.navigate("registerBusinessFlow") {
+                                popUpTo(Dest.Business.route) { inclusive = true }
+                            }
+                        }
+                    },
                     onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
                 )
             }
+
+
+//            composable(Dest.Business.route) {
+//                LoginScreen(
+//                    vm = authViewModel,
+//                    onSuccess = { innerNav.navigate("registerBusinessFlow") },
+//                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
+//                )
+//            }
 
             // REGISTER
             composable(Dest.Register.route) {
@@ -276,8 +291,17 @@ fun MainWithBottomBar() {
                     vm = authViewModel,
                     onSuccess = {
                         if (!authViewModel.uiState.value.token.isNullOrEmpty()) {
-                            innerNav.navigate("registerBusinessFlow") {
-                                popUpTo(Dest.Login.route) { inclusive = true }
+                            val state = authViewModel.uiState.value
+                            if (state.hasBusiness) {
+                                // ✅ Ya tiene negocio → va a servicios
+                                innerNav.navigate(Dest.Servicios.route) {
+                                    popUpTo(Dest.Login.route) { inclusive = true }
+                                }
+                            } else {
+                                // 🚀 No tiene → va a registrar negocio
+                                innerNav.navigate("registerBusinessFlow") {
+                                    popUpTo(Dest.Login.route) { inclusive = true }
+                                }
                             }
                         }
                     },
@@ -285,7 +309,21 @@ fun MainWithBottomBar() {
                 )
             }
 
-            // CHATBOT
+
+//            composable(Dest.Login.route) {
+//                LoginScreen(
+//                    vm = authViewModel,
+//                    onSuccess = {
+//                        if (!authViewModel.uiState.value.token.isNullOrEmpty()) {
+//                            innerNav.navigate("registerBusinessFlow") {
+//                                popUpTo(Dest.Login.route) { inclusive = true }
+//                            }
+//                        }
+//                    },
+//                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
+//                )
+//            }
+
             composable("chatbot") { ChatBotScreen() }
 
             // SUBNAVEGACIÓN DEL REGISTRO DE NEGOCIO
@@ -388,6 +426,32 @@ fun MainWithBottomBar() {
                 }
             }
 
+            composable(Dest.Servicios.route) {
+                val authState by authViewModel.uiState.collectAsState()
+                val vm: ServicioViewModel = viewModel()
+                // DEBUG de la navegación
+                LaunchedEffect(authState.negocioId) {
+                    println("🔍 DEBUG MainWithBottomBar - Navegando a Servicios:")
+                    println("   - authState.negocioId: ${authState.negocioId}")
+                    println("   - authState.hasBusiness: ${authState.hasBusiness}")
+                    println("   - authState.userId: ${authState.userId}")
+                }
+                ServiciosScreen(
+                    vm = vm,
+                    navController = innerNav,
+                    negocioId = authViewModel.uiState.value.negocioId ?: 0, // ✅ negocio real, no userId
+                    onAdd = { innerNav.navigate("editService/0") }
+                )
+
+//                ServiciosScreen(
+//                    vm = vm,
+//                    navController = innerNav,
+//                    negocioId = authViewModel.uiState.value.userId ?: 0, // o el idNegocio real si lo tienes
+//                    onAdd = { innerNav.navigate("editService/0") }
+//                )
+            }
+
+
             // EDIT SERVICE
             composable(
                 route = "editService/{id}",
@@ -408,7 +472,42 @@ fun MainWithBottomBar() {
                     onBack = { innerNav.popBackStack() }   // ← usa innerNav, no navController
                 )
             }
-            
+
+
+            // En tu NavHost dentro de MainWithBottomBar
+            composable(
+                route = "createService/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val negocioId = backStackEntry.arguments?.getInt("negocioId") ?: 0
+                val vm: ServicioViewModel = viewModel()
+                CreateServiceScreen(negocioId = negocioId, vm = vm, navController = innerNav)
+            }
+
+            composable(
+                route = "businessProfile/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val negocioId = backStackEntry.arguments?.getInt("negocioId") ?: 0
+                val vm: NegocioViewModel = viewModel()
+                BusinessProfileScreen(
+                    negocioId = negocioId,
+                    navController = innerNav,
+                    vm = vm
+                )
+            }
+
+// 👉 Horarios con id dinámico
+            composable(
+                route = "horarios/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val negocioId = backStackEntry.arguments?.getInt("negocioId") ?: 0
+                BusinessEditSchedule(
+                    negocioId = negocioId,
+                    onBack = { innerNav.popBackStack() }
+                )
+            }
         }
     }
 }

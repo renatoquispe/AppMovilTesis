@@ -22,7 +22,11 @@ data class AuthUiState(
     val user: String? = null,
     val userId: Int? = null,           // ← NUEVO: ID del usuario
     val role: UserRole? = null,
-    val token: String? = null //probando esto Susan
+    val token: String? = null, //probando esto Susan
+    val hasBusiness: Boolean = false,   // 👈 NUEVO
+    val negocioId: Int? = null   // 👈 NUEVO
+
+
 )
 
 class AuthViewModel : ViewModel() {
@@ -114,50 +118,11 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
-//    fun register(
-//        nombre: String,
-//        email: String,
-//        password: String,
-//        apellidoPaterno: String = "",
-//        apellidoMaterno: String = "",
-//        fechaNacimiento: String = "2000-01-01",
-//        fotoPerfil: String? = null
-//    ) {
-//        val state = _uiState.value
-//        if (nombre.isBlank() || email.isBlank() || password.isBlank()) {
-//            _uiState.value = state.copy(error = "Completa nombre, correo y contraseña")
-//            return
-//        }
-//        _uiState.value = state.copy(isLoading = true, error = null)
-//        viewModelScope.launch {
-//            runCatching {
-//                usuarioRepo.crear(
-//                    UsuarioCreate(
-//                        nombre = nombre,
-//                        apellidoPaterno = apellidoPaterno,
-//                        apellidoMaterno = apellidoMaterno,
-//                        correo = email,
-//                        contrasena = password,
-//                        fechaNacimiento = fechaNacimiento,
-//                        fotoPerfil = fotoPerfil
-//                    )
-//                )
-//            }.onSuccess {
-//                _uiState.value = _uiState.value.copy(
-//                    isLoading = false,
-//                    user = email,    // flag de éxito
-//                    password = ""    // limpia campo
-//                )
-//            }.onFailure { e ->
-//                _uiState.value = _uiState.value.copy(
-//                    isLoading = false,
-//                    error = e.message ?: "No se pudo registrar"
-//                )
-//            }
-//        }
-//    }
+
 
     /** Login tradicional */
+    // En tu AuthViewModel, modifica la función login() para verificar si tiene negocio
+
     fun login() {
         val state = _uiState.value
         if (state.email.isBlank() || state.password.isBlank()) {
@@ -169,37 +134,86 @@ class AuthViewModel : ViewModel() {
             try {
                 val response = RetrofitClient.api.login(LoginRequest(state.email, state.password))
                 if (response.isSuccessful && response.body()?.success == true) {
-//                    val userData = response.body()!!.data!!.usuario //cambios susan
-
-
                     val body = response.body()!!
                     val userData = body.data!!.usuario
-                    val token = body.data!!.token  // 👉 aquí lo recibes
+                    val token = body.data!!.token
+                    // DEBUG CRÍTICO
+                    println("🔍 DEBUG AuthViewModel - UserData completo:")
+                    println("   - idUsuario: ${userData.idUsuario}")
+                    println("   - correo: ${userData.correo}")
+                    println("   - negocioId: ${userData.negocioId}")
+                    println("   - tiene negocio: ${userData.negocioId != null}")
 
-
+                    // 👇 YA NO LLAMES A usuarioTieneNegocio()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         user = userData.correo,
                         userId = userData.idUsuario,
-                        token = token
-
+                        token = token,
+                        hasBusiness = userData.negocioId != null,
+                        negocioId = userData.negocioId
                     )
-                    // 👇 Aquí conectas el token con Retrofit
+
+                    // Configurar Retrofit con el token
                     RetrofitClient.setTokenProvider { _uiState.value.token }
                 } else {
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.value = state.copy(
                         isLoading = false,
                         error = response.body()?.message ?: "Error al iniciar sesión"
                     )
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.value = state.copy(
                     isLoading = false,
                     error = e.message ?: "Error de red"
                 )
             }
         }
     }
+
+
+//    fun login() {
+//        val state = _uiState.value
+//        if (state.email.isBlank() || state.password.isBlank()) {
+//            _uiState.value = state.copy(error = "Correo y contraseña requeridos")
+//            return
+//        }
+//        viewModelScope.launch {
+//            _uiState.value = state.copy(isLoading = true, error = null)
+//            try {
+//                val response = RetrofitClient.api.login(LoginRequest(state.email, state.password))
+//                if (response.isSuccessful && response.body()?.success == true) {
+////                    val userData = response.body()!!.data!!.usuario //cambios susan
+//
+//
+//                    val body = response.body()!!
+//                    val userData = body.data!!.usuario
+//                    val token = body.data!!.token  // 👉 aquí lo recibes
+//
+//
+//                    _uiState.value = _uiState.value.copy(
+//                        isLoading = false,
+//                        user = userData.correo,
+//                        userId = userData.idUsuario,
+//                        token = token
+//
+//                    )
+//                    // 👇 Aquí conectas el token con Retrofit
+//                    RetrofitClient.setTokenProvider { _uiState.value.token }
+//                } else {
+//                    _uiState.value = _uiState.value.copy(
+//                        isLoading = false,
+//                        error = response.body()?.message ?: "Error al iniciar sesión"
+//                    )
+//                }
+//            } catch (e: Exception) {
+//                _uiState.value = _uiState.value.copy(
+//                    isLoading = false,
+//                    error = e.message ?: "Error de red"
+//                )
+//            }
+//        }
+//    }
 
     /** Login con Google */
     fun loginWithGoogle(idToken: String) {
@@ -230,13 +244,13 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    suspend fun usuarioTieneNegocio(idUsuario: Int): Boolean {
-        return try {
-            val negocios = negocioRepo.obtenerNegociosPorUsuario(idUsuario)
-            negocios.isNotEmpty()
-        } catch (e: Exception) {
-            println("❌ Error verificando negocios del usuario: ${e.message}")
-            false
-        }
-    }
+//    suspend fun usuarioTieneNegocio(idUsuario: Int): Boolean {
+//        return try {
+//            val negocios = negocioRepo.obtenerNegociosPorUsuario(idUsuario)
+//            negocios.isNotEmpty()
+//        } catch (e: Exception) {
+//            println("❌ Error verificando negocios del usuario: ${e.message}")
+//            false
+//        }
+//    }
 }
