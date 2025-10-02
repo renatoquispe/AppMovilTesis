@@ -44,6 +44,14 @@ import com.tesis.appmovil.ui.servicios.BusinessProfileScreen
 import com.tesis.appmovil.ui.servicios.CreateServiceScreen
 import com.tesis.appmovil.ui.servicios.ServiciosScreen
 
+import com.tesis.appmovil.ui.account.AccountScreen
+import com.tesis.appmovil.ui.account.SettingsScreen
+import com.tesis.appmovil.ui.account.ChangePasswordScreen
+import com.tesis.appmovil.ui.account.FAQScreen
+import com.tesis.appmovil.ui.account.SupportScreen
+
+
+
 // -----------------------------------------------------------
 
 // ----------------- Rutas -----------------
@@ -211,6 +219,48 @@ fun MainWithBottomBar() {
                     if (id > 1) innerNav.navigate("businessDetail/$id")
                 }
             }
+
+            /// CUENTA
+            composable("cuenta") {
+                AccountScreen(
+                    onProfileClick  = { /* lo que uses */ },
+                    onSettingsClick = { innerNav.navigate("ajustes") },     // si ya la tienes
+                    onFaqClick      = { innerNav.navigate("faq") },          // 👈 AQUÍ navegamos a FAQ
+                    onSupportClick  = { innerNav.navigate("support") },  // 👈 aquí
+                    onLogoutClick   = { /* lo que uses */ }
+                )
+            }
+
+            // SOPORTE
+            composable("support") {
+                // Usa la firma que tenga tu SupportScreen.
+                // Si tu SupportScreen acepta navController:
+                SupportScreen(navController = innerNav)
+
+                // Si tu SupportScreen NO acepta navController, usa:
+                // SupportScreen()
+            }
+
+            // FAQ
+            composable("faq") {
+                FAQScreen(navController = innerNav)
+            }
+
+
+            // CAMBIAR CONTRASEÑA
+            composable("changePassword") {
+                // ChangePasswordScreen también acepta navController (opcional) para back
+                ChangePasswordScreen(navController = innerNav)
+            }
+
+// AJUSTES
+            composable("ajustes") {
+                // Pasamos el navController para que SettingsScreen pueda hacer popBackStack
+                SettingsScreen(navController = innerNav)
+            }
+
+
+
 
             // BUSINESS DETAIL
             composable(
