@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.tesis.appmovil.models.Servicio
+import com.tesis.appmovil.ui.components.BottomNavBar
 import com.tesis.appmovil.viewmodel.ServicioViewModel
 import kotlinx.coroutines.launch
 
@@ -86,19 +87,11 @@ fun ServiciosScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            Surface(shadowElevation = 8.dp) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    PillItem(Icons.Outlined.Home, "Servicios", true) { /* ya aquí */ }
-                    PillItem(Icons.Outlined.Store, "Negocio", false) { navController?.navigate("negocio") }
-                    PillItem(Icons.Outlined.Person, "Cuenta", false) { navController?.navigate("cuenta") }
-                }
-            }
+            BottomNavBar(
+                navController = navController!!,
+                negocioId = negocioId,
+                selected = "servicios"
+            )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(

@@ -1,5 +1,7 @@
 package com.tesis.appmovil.data.remote.request
 
+import com.google.gson.annotations.SerializedName
+
 /** DTOs para /negocios/{id} (detalle) */
 
 data class NegocioResponse(
@@ -58,6 +60,7 @@ data class ServicioDto(
 data class HorarioDto(
     val idHorario: Int? = null,
     val diaSemana: String,
-    val horaApertura: String,
-    val horaCierre: String
+    @SerializedName("hora_apertura") val horaApertura: String,
+    @SerializedName("hora_cierre") val horaCierre: String,
+    val estado: Int
 )
