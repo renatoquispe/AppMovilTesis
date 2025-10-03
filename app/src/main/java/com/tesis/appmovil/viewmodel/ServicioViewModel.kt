@@ -7,6 +7,7 @@ import com.tesis.appmovil.models.Servicio
 import com.tesis.appmovil.repository.ServicioRepository
 import com.tesis.appmovil.data.remote.dto.ServicioCreate
 import com.tesis.appmovil.data.remote.dto.ServicioUpdate
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +19,7 @@ data class ServicioUiState(
     val isLoading: Boolean = false,          // carga de listas
     val mutando: Boolean = false,            // creando/actualizando/eliminando
     val servicios: List<Servicio> = emptyList(),
+    val ofertas: List<Servicio> = emptyList(), // ← NUEVO: lista separada para ofertas
     val seleccionado: Servicio? = null,      // detalle actual
     val error: String? = null,               // error general
     val cargando: Boolean = false            // carga del DETALLE (lo usa EditServiceScreen)
@@ -33,12 +35,49 @@ class ServicioViewModel(
     /** Listado (opcional por negocio) */
     fun cargarServicios(idNegocio: Int? = null) = viewModelScope.launch {
         _ui.update { it.copy(isLoading = true, error = null) }
-        runCatching { repo.listar(idNegocio) }
-            .onSuccess { lista ->
-                _ui.update { it.copy(isLoading = false, servicios = lista) }
+
+        // Cargar servicios normales y ofertas en paralelo
+        val serviciosDeferred = viewModelScope.async { repo.listar(idNegocio) }
+        val ofertasDeferred = viewModelScope.async { repo.obtenerOfertas() }
+
+        try {
+            val servicios = serviciosDeferred.await()
+            val ofertas = ofertasDeferred.await()
+
+            _ui.update {
+                it.copy(
+                    isLoading = false,
+                    servicios = servicios,
+                    ofertas = ofertas
+                )
+            }
+        } catch (e: Exception) {
+            _ui.update {
+                it.copy(
+                    isLoading = false,
+                    error = e.message ?: "Error al cargar datos"
+                )
+            }
+        }
+    }
+//    fun cargarServicios(idNegocio: Int? = null) = viewModelScope.launch {
+//        _ui.update { it.copy(isLoading = true, error = null) }
+//        runCatching { repo.listar(idNegocio) }
+//            .onSuccess { lista ->
+//                _ui.update { it.copy(isLoading = false, servicios = lista) }
+//            }
+//            .onFailure { e ->
+//                _ui.update { it.copy(isLoading = false, error = e.message ?: "Error al cargar servicios") }
+//            }
+//    }
+    fun cargarOfertas() = viewModelScope.launch {
+        _ui.update { it.copy(isLoading = true, error = null) }
+        runCatching { repo.obtenerOfertas() }
+            .onSuccess { ofertas ->
+                _ui.update { it.copy(isLoading = false, ofertas = ofertas) }
             }
             .onFailure { e ->
-                _ui.update { it.copy(isLoading = false, error = e.message ?: "Error al cargar servicios") }
+                _ui.update { it.copy(isLoading = false, error = e.message ?: "Error al cargar ofertas") }
             }
     }
 

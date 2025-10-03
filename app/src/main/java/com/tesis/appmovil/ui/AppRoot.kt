@@ -42,6 +42,13 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.tesis.appmovil.R
 import com.tesis.appmovil.ui.servicios.CreateServiceScreen
 import com.tesis.appmovil.ui.servicios.ServiciosScreen
+import com.tesis.appmovil.ui.auth.ForgotPasswordScreen
+import com.tesis.appmovil.ui.auth.ResetPasswordScreen
+import com.tesis.appmovil.ui.auth.VerifyCodeScreen
+//import com.tesis.appmovil.ui.auth.VerifyCodeScreen
+//import com.tesis.appmovil.ui.auth.ResetPasswordScreen
+import com.tesis.appmovil.viewmodel.PasswordRecoveryViewModel
+
 
 // -----------------------------------------------------------
 
@@ -54,6 +61,14 @@ sealed class Dest(
     // flujo auth
     object Login : Dest("login")
     object Register : Dest("register")
+
+    object ForgotPassword : Dest("forgotPassword") // 👈 NUEVA
+    object VerifyCode : Dest("verifyCode/{email}") { // 👈 NUEVA
+        fun createRoute(email: String) = "verifyCode/$email"
+    }
+    object ResetPassword : Dest("resetPassword/{email}/{code}") { // 👈 NUEVA
+        fun createRoute(email: String, code: String) = "resetPassword/$email/$code"
+    }
 
     // flujo negocio (registro)
     object RegisterBusiness : Dest("registerBusiness")
@@ -96,6 +111,7 @@ fun MainWithBottomBar() {
     val items = listOf(Dest.Home, Dest.Search, Dest.Business)
     val backStack by innerNav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route
+//    val recoveryVm: PasswordRecoveryViewModel = viewModel()
 
     val authViewModel: AuthViewModel = viewModel()
 
@@ -116,7 +132,11 @@ fun MainWithBottomBar() {
         "businessDetail/{idNegocio}",
         "chatbot",
         "editService/{id}",
-        "createService/{negocioId}"
+        "createService/{negocioId}",
+        Dest.ForgotPassword.route,
+        Dest.VerifyCode.route,
+        Dest.ResetPassword.route,
+        "verifyCodeRecovery/{email}"
     )
     val showBottomBar = current !in hideBottomBarRoutes
 
@@ -245,27 +265,25 @@ fun MainWithBottomBar() {
                             }
                         }
                     },
-                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
+                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) },
+                    onNavigateToForgotPassword = { // 👈 NUEVO PARÁMETRO
+                        innerNav.navigate(Dest.ForgotPassword.route)
+                    }
                 )
             }
 
 
-//            composable(Dest.Business.route) {
-//                LoginScreen(
-//                    vm = authViewModel,
-//                    onSuccess = { innerNav.navigate("registerBusinessFlow") },
-//                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
-//                )
-//            }
-
+            // REGISTER
             // REGISTER
             composable(Dest.Register.route) {
+                val authVm: AuthViewModel = viewModel()
+                val recoveryVm: PasswordRecoveryViewModel = viewModel()
+
                 RegisterScreen(
-                    vm = authViewModel,
-                    onSuccess = {
-                        innerNav.navigate(Dest.Login.route) {
-                            popUpTo(Dest.Register.route) { inclusive = true }
-                        }
+                    vm = authVm,
+                    recoveryVm = recoveryVm,
+                    onSuccess = { email ->
+                        innerNav.navigate(Dest.VerifyCode.createRoute(email))
                     },
                     onNavigateToLogin = {
                         innerNav.navigate(Dest.Login.route) {
@@ -275,6 +293,7 @@ fun MainWithBottomBar() {
                 )
             }
 
+
             // LOGIN
             composable(Dest.Login.route) {
                 LoginScreen(
@@ -283,35 +302,84 @@ fun MainWithBottomBar() {
                         if (!authViewModel.uiState.value.token.isNullOrEmpty()) {
                             val state = authViewModel.uiState.value
                             if (state.hasBusiness) {
-                                // ✅ Ya tiene negocio → va a servicios
                                 innerNav.navigate(Dest.Servicios.route) {
                                     popUpTo(Dest.Login.route) { inclusive = true }
                                 }
                             } else {
-                                // 🚀 No tiene → va a registrar negocio
                                 innerNav.navigate("registerBusinessFlow") {
                                     popUpTo(Dest.Login.route) { inclusive = true }
                                 }
                             }
                         }
                     },
-                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
+                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) },
+                    onNavigateToForgotPassword = { // 👈 NUEVO PARÁMETRO
+                        innerNav.navigate(Dest.ForgotPassword.route)
+                    }
+                )
+            }
+            // En ForgotPasswordScreen - MODIFICA el onCodeSent
+            composable(Dest.ForgotPassword.route) {
+                val recoveryVm: PasswordRecoveryViewModel = viewModel() // 👈 INSTANCIA INDEPENDIENTE
+                ForgotPasswordScreen(
+                    vm = recoveryVm, // 👈 MISMA instancia
+                    onBack = { innerNav.popBackStack() },
+                    onCodeSent = { email ->
+                        innerNav.navigate("verifyCodeRecovery/$email")
+                    }
                 )
             }
 
-//            composable(Dest.Login.route) {
-//                LoginScreen(
-//                    vm = authViewModel,
-//                    onSuccess = {
-//                        if (!authViewModel.uiState.value.token.isNullOrEmpty()) {
-//                            innerNav.navigate("registerBusinessFlow") {
-//                                popUpTo(Dest.Login.route) { inclusive = true }
-//                            }
-//                        }
-//                    },
-//                    onNavigateToRegister = { innerNav.navigate(Dest.Register.route) }
-//                )
-//            }
+            // Ruta para verificación de RECUPERACIÓN
+            composable("verifyCodeRecovery/{email}") { backStackEntry ->
+                val email = backStackEntry.arguments?.getString("email") ?: ""
+                val recoveryVm: PasswordRecoveryViewModel = viewModel() // 👈 INSTANCIA INDEPENDIENTE
+
+                VerifyCodeScreen(
+                    vm = recoveryVm, // 👈 MISMA instancia
+                    email = email,
+                    tipoFlujo = FlujoVerificacion.RECUPERACION,
+                    onBack = { innerNav.popBackStack() },
+                    onCodeVerified = { verifiedEmail, code ->
+                        innerNav.navigate(Dest.ResetPassword.createRoute(verifiedEmail, code))
+                    }
+                )
+            }
+
+            // Ruta para verificación de REGISTRO (la que ya tienes)
+            composable(Dest.VerifyCode.route) { backStackEntry ->
+                val email = backStackEntry.arguments?.getString("email") ?: ""
+                val recoveryVm: PasswordRecoveryViewModel = viewModel() // 👈 INSTANCIA INDEPENDIENTE
+                VerifyCodeScreen(
+                    vm = recoveryVm, // 👈 MISMA instancia
+                    email = email,
+                    tipoFlujo = FlujoVerificacion.REGISTRO,
+                    onBack = { innerNav.popBackStack() },
+                    onCodeVerified = { verifiedEmail, code ->
+                        innerNav.navigate(Dest.Login.route) {
+                            popUpTo(Dest.Home.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(Dest.ResetPassword.route) { backStackEntry ->
+                val email = backStackEntry.arguments?.getString("email") ?: ""
+                val code = backStackEntry.arguments?.getString("code") ?: ""
+                val recoveryVm: PasswordRecoveryViewModel = viewModel() // 👈 INSTANCIA INDEPENDIENTE
+
+                ResetPasswordScreen(
+                    vm = recoveryVm, // 👈 MISMA instancia
+                    email = email,
+                    code = code,
+                    onBack = { innerNav.popBackStack() },
+                    onPasswordReset = {
+                        innerNav.navigate(Dest.Login.route) {
+                            popUpTo(Dest.Login.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
 
             // CHATBOT (ruta pública)
             composable("chatbot") { ChatBotScreen() }
@@ -433,12 +501,6 @@ fun MainWithBottomBar() {
                     onAdd = { innerNav.navigate("editService/0") }
                 )
 
-//                ServiciosScreen(
-//                    vm = vm,
-//                    navController = innerNav,
-//                    negocioId = authViewModel.uiState.value.userId ?: 0, // o el idNegocio real si lo tienes
-//                    onAdd = { innerNav.navigate("editService/0") }
-//                )
             }
 
 

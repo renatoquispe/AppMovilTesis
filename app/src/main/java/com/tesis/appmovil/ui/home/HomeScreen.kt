@@ -164,26 +164,47 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                             }
                         )
                     }
-
-                    item { SectionTitle("Servicios disponibles") }
+                    item { SectionTitle("Ofertas especiales") }
                     item {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(state.servicios, key = { it.idServicio }) { servicio ->
-                                SmallServiceCard(
-                                    servicio = servicio,
-                                    onClick = {
-                                        val idDestino = (servicio.idNegocio.takeIf { id -> id > 0 }
-                                            ?: servicio.negocio.idNegocio)
-                                        if (idDestino > 0) {
-                                            navController?.navigate("businessDetail/$idDestino")
+                        // 👇 CAMBIA state.servicios por state.ofertas
+                        if (state.ofertas.isNotEmpty()) {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(state.ofertas, key = { it.idServicio }) { servicio ->
+                                    SmallServiceCard(
+                                        servicio = servicio,
+                                        onClick = {
+                                            val idDestino = (servicio.idNegocio.takeIf { id -> id > 0 }
+                                                ?: servicio.negocio.idNegocio)
+                                            if (idDestino > 0) {
+                                                navController?.navigate("businessDetail/$idDestino")
+                                            }
                                         }
-                                    }
+                                    )
+                                }
+                            }
+                        } else {
+                            // Mensaje cuando no hay ofertas
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(100.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                        RoundedCornerShape(12.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "No hay ofertas especiales en este momento",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                             }
                         }
                     }
 
-                    item { SectionTitle("Estilos cerca de ti") }
+
+                    item { SectionTitle("Servicios cerca de ti") }
                     item {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(state.servicios.take(4), key = { it.idServicio }) { servicio ->
@@ -201,7 +222,7 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                         }
                     }
 
-                    item { SectionTitle("Servicios destacados en tu zona") }
+                    item { SectionTitle("Negocios destacados en tu zona") }
                     item {
                         val negociosUnicos = state.servicios
                             .groupBy { it.idNegocio.takeIf { id -> id > 0 } ?: it.negocio.idNegocio }
@@ -326,6 +347,7 @@ private fun SmallServiceCard(servicio: Servicio, onClick: () -> Unit = {}) {
     val onPurple = MaterialTheme.colorScheme.onPrimary
     val cardWidth = 360.dp
     val cardHeight = 160.dp
+    val descuentoPorcentaje = servicio.getDescuentoPorcentaje()
 
     Card(
         shape = RoundedCornerShape(20.dp),
@@ -375,7 +397,7 @@ private fun SmallServiceCard(servicio: Servicio, onClick: () -> Unit = {}) {
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "${servicio.descuento?.toInt() ?: 0}%",
+                            text = "${descuentoPorcentaje}%",
                             color = Color.White,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold

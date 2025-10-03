@@ -11,12 +11,20 @@ import com.tesis.appmovil.data.remote.request.NegocioResponse
 data class Servicio(
     val idServicio: Int,
     val nombre: String,
-    val descuento: Double?,        // nuevo campo
+    val descuento: String?,        // nuevo campo
     val imagenUrl: String?,
     val precio: String,
     val duracionMinutos: Int,
     val estadoAuditoria: Int,
     val idNegocio: Int,
     val negocio: NegocioResponse
-)
-
+) {
+    // 👇 AGREGA ESTA FUNCIÓN PARA CONVERTIR A PORCENTAJE
+    fun getDescuentoPorcentaje(): Int {
+        return if (!descuento.isNullOrEmpty()) {
+            (descuento.toDouble() * 100).toInt()
+        } else {
+            0
+        }
+    }
+}

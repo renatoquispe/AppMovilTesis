@@ -7,6 +7,14 @@ import com.tesis.appmovil.data.remote.request.LoginRequest
 import com.tesis.appmovil.data.remote.request.LoginResponse
 import com.tesis.appmovil.data.remote.request.NegocioResponse
 import com.tesis.appmovil.data.remote.request.PagedResponse
+import com.tesis.appmovil.data.remote.request.RegisterRequest
+import com.tesis.appmovil.data.remote.request.RegisterResponse
+import com.tesis.appmovil.data.remote.request.RestablecerContrasenaRequest
+import com.tesis.appmovil.data.remote.request.SolicitarCodigoRequest
+import com.tesis.appmovil.data.remote.request.VerificarCodigoRequest
+//import com.tesis.appmovil.data.remote.request.RestablecerContrasenaRequest
+//import com.tesis.appmovil.data.remote.request.SolicitarCodigoRequest
+//import com.tesis.appmovil.data.remote.request.VerificarCodigoRequest
 import com.tesis.appmovil.models.*
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -174,6 +182,10 @@ interface ApiService {
         @Path("id") id: Int
     ): Response<ApiResponse<Servicio>>
 
+    // En tu ApiService.kt - AGREGA ESTE MÉTODO
+    @GET("servicios/ofertas")
+    suspend fun getOfertas(): Response<ApiResponse<List<Servicio>>>
+
     // ---------- HORARIOS ----------
     @GET("horarios")
     suspend fun getHorarios(
@@ -320,4 +332,24 @@ interface ApiService {
     // ---------- FILTRO DE SERVICIOS (chatbot) ----------
     @POST("filtrar-servicios")
     suspend fun filterServicios(@Body body: com.tesis.appmovil.data.remote.ServicioFilterRequest): Response<com.tesis.appmovil.data.remote.ApiResponse<List<com.tesis.appmovil.models.Servicio>>>
+
+    // En ApiService.kt - CORRIGE las rutas
+    @POST("auth/recuperacion/solicitar") // 👈 RUTA CORRECTA
+    suspend fun solicitarCodigoRecuperacion(@Body request: SolicitarCodigoRequest): Response<ApiResponse<Any>>
+
+    @POST("auth/recuperacion/verificar") // 👈 RUTA CORRECTA
+    suspend fun verificarCodigoRecuperacion(@Body request: VerificarCodigoRequest): Response<ApiResponse<Any>>
+
+    @POST("auth/recuperacion/restablecer") // 👈 RUTA CORRECTA
+    suspend fun restablecerContrasena(@Body request: RestablecerContrasenaRequest): Response<ApiResponse<Any>>
+
+    @POST("auth/register")
+    suspend fun register(@Body body: RegisterRequest): Response<RegisterResponse>
+
+    // ✅ NUEVAS RUTAS para verificación de email (registro)
+    @POST("auth/recuperacion/solicitar-verificacion")
+    suspend fun solicitarCodigoVerificacion(@Body request: SolicitarCodigoRequest): Response<ApiResponse<Any>>
+
+    @POST("auth/recuperacion/verificar-email")
+    suspend fun verificarCodigoEmail(@Body request: VerificarCodigoRequest): Response<ApiResponse<Any>>
 }

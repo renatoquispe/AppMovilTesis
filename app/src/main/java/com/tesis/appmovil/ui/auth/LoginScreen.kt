@@ -29,7 +29,9 @@ import kotlinx.coroutines.delay
 fun LoginScreen(
     vm: AuthViewModel,
     onSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit // 👈 AGREGAR ESTE PARÁMETRO
+
 ) {
     val state by vm.uiState.collectAsState()
     val context = LocalContext.current
@@ -165,9 +167,18 @@ fun LoginScreen(
         }
 
         // Olvidaste contraseña
+//        Box(Modifier.fillMaxWidth()) {
+//            // Busca esta parte en tu LoginScreen y cámbiala:
+//            TextButton(
+//                onClick = { /* TODO recuperación */ },
+//                modifier = Modifier.align(Alignment.CenterEnd)
+//            ) {
+//                Text("¿Olvidaste tu contraseña?", color = MaterialTheme.colorScheme.primary)
+//            }
+//        }
         Box(Modifier.fillMaxWidth()) {
             TextButton(
-                onClick = { /* TODO recuperación */ },
+                onClick = onNavigateToForgotPassword, // 👈 USAR EL NUEVO PARÁMETRO
                 modifier = Modifier.align(Alignment.CenterEnd)
             ) {
                 Text("¿Olvidaste tu contraseña?", color = MaterialTheme.colorScheme.primary)

@@ -94,6 +94,37 @@ class ServicioRepository(
             throw e
         }
     }
+    // En ServicioRepository.kt - AGREGA ESTE MÉTODO
+    suspend fun obtenerOfertas(): List<Servicio> {
+        try {
+            println("🔍 DEBUG ServicioRepository - obteniendo ofertas")
+
+            val resp = api.getOfertas()
+            println("🔍 DEBUG ServicioRepository - respuesta ofertas HTTP: ${resp.code()}")
+
+            if (resp.isSuccessful) {
+                val body = resp.body()
+                println("🔍 DEBUG ServicioRepository - ofertas body success: ${body?.success}")
+                println("🔍 DEBUG ServicioRepository - ofertas body message: ${body?.message}")
+
+                if (body != null && body.success && body.data != null) {
+                    @Suppress("UNCHECKED_CAST")
+                    val ofertas = body.data as List<Servicio>
+                    println("🔍 DEBUG ServicioRepository - ofertas obtenidas: ${ofertas.size}")
+                    ofertas.forEach { servicio ->
+                        println("   - Oferta: ${servicio.nombre} - Descuento: ${servicio.descuento}%")
+                    }
+                    return ofertas
+                }
+                throw Exception(body?.message ?: "Lista de ofertas vacía o fallida")
+            } else {
+                throw httpException(resp)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "obtenerOfertas error", e)
+            throw e
+        }
+    }
 //    suspend fun crear(body: ServicioCreate): Servicio {
 //        try {
 //            val resp = api.createServicio(body)

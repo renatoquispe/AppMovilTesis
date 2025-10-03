@@ -6,6 +6,7 @@ import com.tesis.appmovil.data.remote.request.GoogleLoginRequest
 import com.tesis.appmovil.data.remote.request.LoginRequest
 import com.tesis.appmovil.data.remote.RetrofitClient
 import com.tesis.appmovil.data.remote.dto.UsuarioCreate
+import com.tesis.appmovil.data.remote.request.RegisterRequest
 import com.tesis.appmovil.models.UserRole
 import com.tesis.appmovil.repository.UsuarioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,6 +51,8 @@ class AuthViewModel : ViewModel() {
     /** Registro local */
 
     /** Registro con login automático - VERSIÓN CORRECTA */
+    // En AuthViewModel.kt - REEMPLAZA la función register actual por esta:
+    // En AuthViewModel.kt - ACTUALIZA la función register
     fun register(
         nombre: String,
         email: String,
@@ -68,9 +71,9 @@ class AuthViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                // 1. Registrar usuario - Si falla, lanzará excepción automáticamente
-                val usuarioCreado = usuarioRepo.crear(
-                    UsuarioCreate(
+                // 1. Registrar usuario
+                val response = RetrofitClient.api.register(
+                    RegisterRequest(
                         nombre = nombre,
                         apellidoPaterno = apellidoPaterno,
                         apellidoMaterno = apellidoMaterno,
@@ -81,32 +84,35 @@ class AuthViewModel : ViewModel() {
                     )
                 )
 
-                println("✅ Usuario registrado: ${usuarioCreado.correo}")
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val body = response.body()!!
+                    val userData = body.data
 
-                // 2. Hacer login automático después del registro exitoso
-                val loginResponse = RetrofitClient.api.login(LoginRequest(email, password))
+                    if (userData != null) {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            user = userData.correo,
+                            userId = userData.idUsuario,
+                            // Estos campos no vienen en la respuesta de registro
+                            token = null,
+                            hasBusiness = false,
+                            negocioId = null
+                        )
 
-                if (loginResponse.isSuccessful && loginResponse.body()?.success == true) {
-                    val body = loginResponse.body()!!
-                    val userData = body.data!!.usuario
-                    val token = body.data!!.token
+                        println("✅ REGISTRO EXITOSO - Usuario: ${userData.correo}, ID: ${userData.idUsuario}")
+                        println("📧 Mensaje del backend: ${body.message}")
 
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        user = userData.correo,
-                        userId = userData.idUsuario,
-                        token = token
-                    )
-
-                    // Configurar Retrofit con el token
-                    RetrofitClient.setTokenProvider { _uiState.value.token }
-
-                    println("✅ REGISTRO + LOGIN EXITOSO - Token: $token")
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = "Error: Datos del usuario no recibidos"
+                        )
+                    }
 
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = "Registro exitoso, pero error en login: ${loginResponse.body()?.message}"
+                        error = response.body()?.message ?: "Error en el registro"
                     )
                 }
 
@@ -118,6 +124,76 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
+
+
+//    fun register(
+//        nombre: String,
+//        email: String,
+//        password: String,
+//        apellidoPaterno: String = "",
+//        apellidoMaterno: String = "",
+//        fechaNacimiento: String = "2000-01-01",
+//        fotoPerfil: String? = null
+//    ) {
+//        val state = _uiState.value
+//        if (nombre.isBlank() || email.isBlank() || password.isBlank()) {
+//            _uiState.value = state.copy(error = "Completa nombre, correo y contraseña")
+//            return
+//        }
+//        _uiState.value = state.copy(isLoading = true, error = null)
+//
+//        viewModelScope.launch {
+//            try {
+//                // 1. Registrar usuario - Si falla, lanzará excepción automáticamente
+//                val usuarioCreado = usuarioRepo.crear(
+//                    UsuarioCreate(
+//                        nombre = nombre,
+//                        apellidoPaterno = apellidoPaterno,
+//                        apellidoMaterno = apellidoMaterno,
+//                        correo = email,
+//                        contrasena = password,
+//                        fechaNacimiento = fechaNacimiento,
+//                        fotoPerfil = fotoPerfil
+//                    )
+//                )
+//
+//                println("✅ Usuario registrado: ${usuarioCreado.correo}")
+//
+//                // 2. Hacer login automático después del registro exitoso
+//                val loginResponse = RetrofitClient.api.login(LoginRequest(email, password))
+//
+//                if (loginResponse.isSuccessful && loginResponse.body()?.success == true) {
+//                    val body = loginResponse.body()!!
+//                    val userData = body.data!!.usuario
+//                    val token = body.data!!.token
+//
+//                    _uiState.value = _uiState.value.copy(
+//                        isLoading = false,
+//                        user = userData.correo,
+//                        userId = userData.idUsuario,
+//                        token = token
+//                    )
+//
+//                    // Configurar Retrofit con el token
+//                    RetrofitClient.setTokenProvider { _uiState.value.token }
+//
+//                    println("✅ REGISTRO + LOGIN EXITOSO - Token: $token")
+//
+//                } else {
+//                    _uiState.value = _uiState.value.copy(
+//                        isLoading = false,
+//                        error = "Registro exitoso, pero error en login: ${loginResponse.body()?.message}"
+//                    )
+//                }
+//
+//            } catch (e: Exception) {
+//                _uiState.value = _uiState.value.copy(
+//                    isLoading = false,
+//                    error = "Error: ${e.message ?: "No se pudo registrar el usuario"}"
+//                )
+//            }
+//        }
+//    }
 
 
     /** Login tradicional */

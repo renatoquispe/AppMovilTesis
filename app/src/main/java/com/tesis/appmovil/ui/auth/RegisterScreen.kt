@@ -16,32 +16,79 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.tesis.appmovil.R
 import com.tesis.appmovil.viewmodel.AuthViewModel
+import com.tesis.appmovil.viewmodel.PasswordRecoveryViewModel
+
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun RegisterScreen(
     vm: AuthViewModel,
-    onSuccess: () -> Unit,          // Navega al Login
+    recoveryVm: PasswordRecoveryViewModel, // 👈 NUEVO: ViewModel para verificación
+    onSuccess: (String) -> Unit,
+//    onSuccess: () -> Unit,          // Navega al Login
     onNavigateToLogin: () -> Unit   // Para el botón "Iniciar Sesión"
 ) {
     val state by vm.uiState.collectAsState()
+    val recoveryState by recoveryVm.uiState.collectAsState() // 👈 Estado de verificación
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
+    var codigoSolicitado by remember { mutableStateOf(false) }
+    var ejecuciones by remember { mutableStateOf(0) }
+    var registroExitoso by remember { mutableStateOf(false) }
+
 
     // Al entrar, resetea estados de éxito/error
+    // Resetear estados al entrar
+    // Resetear estados al entrar
     LaunchedEffect(Unit) {
+        println("🔄 RegisterScreen: Inicializando - Resetear estados")
         vm.clearTransient()
+        recoveryVm.resetearFlujo()
+        registroExitoso = false
     }
-
-    // Cuando el registro sea exitoso (state.user != null)
     LaunchedEffect(state.user) {
-        if (state.user != null) {
-            Toast.makeText(context, "Registrado correctamente", Toast.LENGTH_LONG).show()
-            onSuccess()
+        if (state.user != null && !registroExitoso) {
+            println("✅ Registro exitoso, navegando a verificación...")
+            registroExitoso = true
+            onSuccess(state.email)
         }
     }
+    // ✅ EFECTO CON PROTECCIÓN MEJORADA
+//    LaunchedEffect(state.user) {
+//        if (state.user != null && !registroExitoso) {
+//            println("✅ Registro exitoso, solicitando código de verificación...")
+//            registroExitoso = true
+//            recoveryVm.solicitarCodigoVerificacion(state.email)
+//        }
+//    }
+    // ✅ CUANDO EL CÓDIGO SE ENVÍA EXITOSAMENTE
+    LaunchedEffect(recoveryState.pasoActual) {
+        println("🔍 LaunchedEffect recoveryState.pasoActual: ${recoveryState.pasoActual}")
+        if (recoveryState.pasoActual == 2 && recoveryState.successMessage != null) {
+            println("📍 NAVEGANDO A VERIFY CODE")
+            onSuccess(state.email)
+        }
+    }
+//    LaunchedEffect(Unit) {
+//        vm.clearTransient()
+//        recoveryVm.resetearFlujo() // 👈 Resetear estado de verificación
+//        codigoSolicitado = false // 👈 Resetear el flag también
+//
+//    }
 
+
+    // 👇 EFECTO PARA MOSTRAR ERRORES
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+        }
+    }
+    LaunchedEffect(recoveryState.error) {
+        recoveryState.error?.let { error ->
+            Toast.makeText(context, "Error en verificación: $error", Toast.LENGTH_LONG).show()
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -121,6 +168,11 @@ fun RegisterScreen(
                 focusedLabelColor     = MaterialTheme.colorScheme.primary
             )
         )
+        // 👇 NUEVO: Mostrar errores de ambos ViewModels
+        state.error?.let { errorMsg ->
+            Spacer(Modifier.height(8.dp))
+            Text(errorMsg, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+        }
 
         state.error?.let { errorMsg ->
             Spacer(Modifier.height(8.dp))
@@ -140,7 +192,8 @@ fun RegisterScreen(
                     password = state.password
                 )
             },
-            enabled = !state.isLoading,
+            enabled = !state.isLoading && !recoveryState.isLoading, // 👈 Considerar ambos loadings
+//            enabled = !state.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -158,6 +211,6 @@ fun RegisterScreen(
             }
         }
 
-        // ... resto de tu UI (separador, botones sociales) ...
+
     }
 }
