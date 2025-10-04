@@ -47,7 +47,13 @@ fun BottomNavBar(
                 icon = Icons.Filled.Person,
                 label = "Cuenta",
                 selected = selected == "cuenta"
-            ) { navController.navigate("cuenta") }
+            ) {
+                navController.navigate("cuenta") {
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
         }
     }
 }
