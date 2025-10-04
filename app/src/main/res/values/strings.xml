@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AppMovilTesis</string>
+    <string name="app_name">Belora</string>
 
     <!-- Tu client id actual -->
     <string name="google_web_client_id">

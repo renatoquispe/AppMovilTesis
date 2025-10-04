@@ -52,7 +52,7 @@ import com.tesis.appmovil.viewmodel.PasswordRecoveryViewModel
 import com.tesis.appmovil.ui.account.SettingsScreen
 import com.tesis.appmovil.ui.account.FAQScreen
 import com.tesis.appmovil.ui.account.SupportScreen
-
+import com.tesis.appmovil.ui.servicios.BusinessProfileScreen
 
 
 // -----------------------------------------------------------
@@ -138,6 +138,7 @@ fun MainWithBottomBar() {
         "chatbot",
         "editService/{id}",
         "createService/{negocioId}",
+        "businessProfile/{negocioId}",
         Dest.ForgotPassword.route,
         Dest.VerifyCode.route,
         Dest.ResetPassword.route,
@@ -147,7 +148,8 @@ fun MainWithBottomBar() {
         "support",
         "faq",
         "changePassword",
-        "ajustes"
+        "ajustes",
+        "servicios/{negocioId}"
     )
     val showBottomBar = current !in hideBottomBarRoutes
 
@@ -589,7 +591,18 @@ fun MainWithBottomBar() {
                 // Pasamos el navController para que SettingsScreen pueda hacer popBackStack
                 SettingsScreen(navController = innerNav)
             }
-
+            composable(
+                route = "businessProfile/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val negocioId = backStackEntry.arguments?.getInt("negocioId") ?: 0
+                val vm: NegocioViewModel = viewModel()
+                BusinessProfileScreen(
+                    negocioId = negocioId,
+                    navController = innerNav,
+                    vm = vm
+                )
+            }
 
         }
     }
