@@ -117,7 +117,7 @@ fun BusinessProfileScreen(
                     telefono        = r.telefono,
                     correo_contacto = r.correoContacto,
                     fecha_creacion  = r.fechaCreacion?.let { Date() } ?: Date(),
-                    estado_auditoria= r.estadoAuditoria ?: 0
+                    estado_auditoria= r.estadoAuditoria ?: 0,
                 )
 
                 BusinessProfile(
