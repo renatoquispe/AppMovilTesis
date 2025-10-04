@@ -40,14 +40,19 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.tesis.appmovil.R
+import com.tesis.appmovil.ui.account.AccountScreen
+import com.tesis.appmovil.ui.account.ChangePasswordScreen
+import com.tesis.appmovil.ui.account.EditProfileScreen
 import com.tesis.appmovil.ui.servicios.CreateServiceScreen
 import com.tesis.appmovil.ui.servicios.ServiciosScreen
 import com.tesis.appmovil.ui.auth.ForgotPasswordScreen
 import com.tesis.appmovil.ui.auth.ResetPasswordScreen
 import com.tesis.appmovil.ui.auth.VerifyCodeScreen
-//import com.tesis.appmovil.ui.auth.VerifyCodeScreen
-//import com.tesis.appmovil.ui.auth.ResetPasswordScreen
 import com.tesis.appmovil.viewmodel.PasswordRecoveryViewModel
+import com.tesis.appmovil.ui.account.SettingsScreen
+import com.tesis.appmovil.ui.account.FAQScreen
+import com.tesis.appmovil.ui.account.SupportScreen
+
 
 
 // -----------------------------------------------------------
@@ -136,7 +141,13 @@ fun MainWithBottomBar() {
         Dest.ForgotPassword.route,
         Dest.VerifyCode.route,
         Dest.ResetPassword.route,
-        "verifyCodeRecovery/{email}"
+        "verifyCodeRecovery/{email}",
+        "cuenta",
+        "profile",
+        "support",
+        "faq",
+        "changePassword",
+        "ajustes"
     )
     val showBottomBar = current !in hideBottomBarRoutes
 
@@ -522,6 +533,63 @@ fun MainWithBottomBar() {
                 val vm: ServicioViewModel = viewModel()
                 CreateServiceScreen(negocioId = negocioId, vm = vm, navController = innerNav)
             }
+
+            composable(
+                route = "servicios/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val negocioId = backStackEntry.arguments?.getInt("negocioId") ?: 0
+                val vm: ServicioViewModel = viewModel()
+                ServiciosScreen(
+                    vm = vm,
+                    navController = innerNav,
+                    negocioId = negocioId
+                )
+            }
+            /// CUENTA
+            composable("cuenta") {
+                AccountScreen(
+                    onProfileClick  = { innerNav.navigate("profile") },
+                    onSettingsClick = { innerNav.navigate("ajustes") },     // si ya la tienes
+                    onFaqClick      = { innerNav.navigate("faq") },          // 👈 AQUÍ navegamos a FAQ
+                    onSupportClick  = { innerNav.navigate("support") },  // 👈 aquí
+                    onLogoutClick   = { /* lo que uses */ }
+                )
+            }
+            // PROFILE
+            composable("profile") {
+                EditProfileScreen(nav = innerNav)
+            }
+
+
+            // SOPORTE
+            composable("support") {
+                // Usa la firma que tenga tu SupportScreen.
+                // Si tu SupportScreen acepta navController:
+                SupportScreen(navController = innerNav)
+
+                // Si tu SupportScreen NO acepta navController, usa:
+                // SupportScreen()
+            }
+
+            // FAQ
+            composable("faq") {
+                FAQScreen(navController = innerNav)
+            }
+
+
+            // CAMBIAR CONTRASEÑA
+            composable("changePassword") {
+                // ChangePasswordScreen también acepta navController (opcional) para back
+                ChangePasswordScreen(navController = innerNav)
+            }
+
+// AJUSTES
+            composable("ajustes") {
+                // Pasamos el navController para que SettingsScreen pueda hacer popBackStack
+                SettingsScreen(navController = innerNav)
+            }
+
 
         }
     }
