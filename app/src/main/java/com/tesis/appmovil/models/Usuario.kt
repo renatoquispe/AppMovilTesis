@@ -1,15 +1,14 @@
 package com.tesis.appmovil.models
-import java.util.Date
 
 data class Usuario(
-    val id_usuario: Int,
-    val nombre: String,
-    val apellido_paterno: String,
-    val apellido_materno: String,
-    val correo: String,
+    val idUsuario: Int,
+    val nombre: String?,
+    val apellidoPaterno: String?,
+    val apellidoMaterno: String?,
+    val correo: String?,
     val contrasena: String? = null,
-    val fecha_nacimiento: Date,
-    val foto_perfil: String?,
-    val fecha_creacion: Date,
-    val estado_auditoria: Boolean
+    val fechaNacimiento: String?,   // 👈 string en formato yyyy-MM-dd
+    val fotoPerfil: String?,
+    val fechaCreacion: String?,     // también llega como string ISO
+    val estadoAuditoria: Int        // llega como 1 o 0
 )

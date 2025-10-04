@@ -550,17 +550,48 @@ fun MainWithBottomBar() {
             }
             /// CUENTA
             composable("cuenta") {
+                val usuarioVM: UsuarioViewModel = viewModel()
+                val authState by authViewModel.uiState.collectAsState()
+                val uiState by usuarioVM.uiState.collectAsState()
+
+                // cuando entras a "cuenta", carga el usuario logueado
+                LaunchedEffect(authState.userId) {
+                    authState.userId?.let { id ->
+                        usuarioVM.obtenerUsuario(id)
+                    }
+                }
+
+                val user = uiState.seleccionado
+                val fullName = listOfNotNull(
+                    user?.nombre,
+                    user?.apellidoPaterno,
+                    user?.apellidoMaterno
+                ).joinToString(" ")
+
                 AccountScreen(
+                    navController = innerNav,  // 👈 ahora sí
+                    negocioId = authState.negocioId ?: 0, // 👈 usa el negocio real del usuario logueado
+                    userName = if (fullName.isNotBlank()) fullName else "Nombres y Apellidos",
                     onProfileClick  = { innerNav.navigate("profile") },
-                    onSettingsClick = { innerNav.navigate("ajustes") },     // si ya la tienes
-                    onFaqClick      = { innerNav.navigate("faq") },          // 👈 AQUÍ navegamos a FAQ
-                    onSupportClick  = { innerNav.navigate("support") },  // 👈 aquí
-                    onLogoutClick   = { /* lo que uses */ }
+                    onSettingsClick = { innerNav.navigate("ajustes") },
+                    onFaqClick      = { innerNav.navigate("faq") },
+                    onSupportClick  = { innerNav.navigate("support") },
+                    onLogoutClick   = { /* tu lógica de logout */ }
                 )
             }
-            // PROFILE
+
             composable("profile") {
-                EditProfileScreen(nav = innerNav)
+                val usuarioVM: UsuarioViewModel = viewModel()
+                val authState by authViewModel.uiState.collectAsState()
+
+                // cuando entras, carga el usuario logueado
+                LaunchedEffect(authState.userId) {
+                    authState.userId?.let { id ->
+                        usuarioVM.obtenerUsuario(id)
+                    }
+                }
+
+                EditProfileScreen(nav = innerNav, usuarioVM = usuarioVM)
             }
 
 
@@ -580,10 +611,11 @@ fun MainWithBottomBar() {
             }
 
 
-            // CAMBIAR CONTRASEÑA
             composable("changePassword") {
-                // ChangePasswordScreen también acepta navController (opcional) para back
-                ChangePasswordScreen(navController = innerNav)
+                ChangePasswordScreen(
+                    navController = innerNav,
+                    authVM = authViewModel // 👈 pasa la instancia compartida
+                )
             }
 
 // AJUSTES

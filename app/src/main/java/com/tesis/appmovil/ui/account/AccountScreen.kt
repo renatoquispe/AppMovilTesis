@@ -18,9 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.tesis.appmovil.ui.components.BottomNavBar
 
 @Composable
 fun AccountScreen(
+    navController: NavController? = null, // 👈 agregado para que puedas pasar el nav
+    negocioId: Int = 0,                   // 👈 agregado con valor por defecto
     userName: String = "Nombres y Apellidos",
     onProfileClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
@@ -28,60 +32,73 @@ fun AccountScreen(
     onSupportClick: () -> Unit = {},
     onLogoutClick: () -> Unit = {}
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Avatar
-        Box(
+    Scaffold(
+        bottomBar = {
+            if (navController != null) {
+                BottomNavBar(
+                    navController = navController,
+                    negocioId = negocioId,
+                    selected = "cuenta" // 👈 marcamos cuenta como activo
+                )
+            }
+        }
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                Icons.Outlined.Person,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            // Avatar
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Outlined.Person,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Text(userName, style = MaterialTheme.typography.titleMedium)
+            Text("Cuenta personal", style = MaterialTheme.typography.bodyMedium)
+
+            Spacer(Modifier.height(24.dp))
+
+            // Opciones
+            AccountOption(
+                icon = Icons.Outlined.Person,
+                text = "Perfil",
+                onClick = onProfileClick
+            )
+            AccountOption(
+                icon = Icons.Outlined.Settings,
+                text = "Ajustes",
+                onClick = onSettingsClick
+            )
+            AccountOption(
+                icon = Icons.Outlined.HelpOutline,
+                text = "Preguntas frecuentes",
+                onClick = onFaqClick
+            )
+            AccountOption(
+                icon = Icons.Outlined.SupportAgent,
+                text = "Soporte",
+                onClick = onSupportClick
+            )
+            AccountOption(
+                icon = Icons.Outlined.ExitToApp,
+                text = "Cerrar sesión",
+                onClick = onLogoutClick
             )
         }
-
-        Spacer(Modifier.height(12.dp))
-        Text(userName, style = MaterialTheme.typography.titleMedium)
-        Text("Cuenta personal", style = MaterialTheme.typography.bodyMedium)
-
-        Spacer(Modifier.height(24.dp))
-
-        // Opciones
-        AccountOption(
-            icon = Icons.Outlined.Person,
-            text = "Perfil",
-            onClick = onProfileClick
-        )
-        AccountOption(
-            icon = Icons.Outlined.Settings,
-            text = "Ajustes",
-            onClick = onSettingsClick
-        )
-        AccountOption(
-            icon = Icons.Outlined.HelpOutline,
-            text = "Preguntas frecuentes",
-            onClick = onFaqClick
-        )
-        AccountOption(
-            icon = Icons.Outlined.SupportAgent,
-            text = "Soporte",
-            onClick = onSupportClick
-        )
-        AccountOption(
-            icon = Icons.Outlined.ExitToApp,
-            text = "Cerrar sesión",
-            onClick = onLogoutClick
-        )
     }
 }
 

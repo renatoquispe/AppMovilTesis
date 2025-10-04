@@ -33,10 +33,11 @@ interface ApiService {
 
     // ---------- USUARIOS ----------
     @GET("usuarios")
-    suspend fun getUsuarios(): Response<List<Usuario>>
+    suspend fun getUsuarios(): Response<ApiResponse<List<Usuario>>>
 
     @GET("usuarios/{id}")
-    suspend fun getUsuario(@Path("id") id: Int): Response<Usuario>
+    suspend fun getUsuario(@Path("id") id: Int): Response<ApiResponse<Usuario>>
+
 
     @POST("usuarios")
     suspend fun createUsuario(@Body body: UsuarioCreate): Response<Usuario>
@@ -53,6 +54,11 @@ interface ApiService {
     @GET("usuarios/{id}/negocios")
     suspend fun getNegociosPorUsuario(@Path("id") idUsuario: Int): Response<ApiResponse<List<Negocio>>>
 
+    @PUT("usuarios/{id}/password")
+    suspend fun changePassword(
+        @Path("id") id: Int,
+        @Body body: ChangePasswordRequest
+    ): Response<ApiResponse<Unit>>
     // ---------- CATEGORIAS ----------
     @GET("categorias")
     suspend fun getCategorias(): Response<ApiResponse<List<Categoria>>>

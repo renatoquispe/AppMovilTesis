@@ -20,3 +20,8 @@ data class UsuarioUpdate(
     val fotoPerfil: String? = null,
     val estadoAuditoria: Boolean? = null
 )
+
+data class ChangePasswordRequest(
+    val currentPassword: String,
+    val newPassword: String
+)

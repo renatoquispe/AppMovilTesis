@@ -41,9 +41,16 @@ class UsuarioViewModel(
 
     fun obtenerUsuario(id: Int) {
         viewModelScope.launch {
+            println("🔍 DEBUG: llamando a repo.obtener($id)")
             runCatching { repo.obtener(id) }
-                .onSuccess { user -> _uiState.update { it.copy(seleccionado = user) } }
-                .onFailure { e -> _uiState.update { it.copy(error = e.message ?: "No se pudo obtener") } }
+                .onSuccess { user ->
+                    println("✅ Usuario recibido: $user")
+                    _uiState.update { it.copy(seleccionado = user) }
+                }
+                .onFailure { e ->
+                    println("❌ Error al obtener usuario: ${e.message}")
+                    _uiState.update { it.copy(error = e.message ?: "No se pudo obtener") }
+                }
         }
     }
 
@@ -64,7 +71,7 @@ class UsuarioViewModel(
             _uiState.update { it.copy(mutando = true, error = null) }
             runCatching { repo.actualizar(id, cambios) }
                 .onSuccess { actualizado ->
-                    val lista = _uiState.value.usuarios.map { if (it.id_usuario == id) actualizado else it }
+                    val lista = _uiState.value.usuarios.map { if (it.idUsuario == id) actualizado else it }
                     _uiState.update { it.copy(mutando = false, usuarios = lista, seleccionado = actualizado) }
                 }
                 .onFailure { e -> _uiState.update { it.copy(mutando = false, error = e.message ?: "No se pudo actualizar") } }
@@ -76,10 +83,18 @@ class UsuarioViewModel(
             _uiState.update { it.copy(mutando = true, error = null) }
             runCatching { repo.eliminar(id) }
                 .onSuccess {
-                    val lista = _uiState.value.usuarios.filterNot { it.id_usuario == id }
+                    val lista = _uiState.value.usuarios.filterNot { it.idUsuario == id }
                     _uiState.update { it.copy(mutando = false, usuarios = lista, seleccionado = null) }
                 }
                 .onFailure { e -> _uiState.update { it.copy(mutando = false, error = e.message ?: "No se pudo eliminar") } }
+        }
+    }
+
+    fun cambiarContrasena(id: Int, actual: String, nueva: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            runCatching { repo.cambiarContrasena(id, actual, nueva) }
+                .onSuccess { onSuccess() }
+                .onFailure { e -> onError(e.message ?: "Error al cambiar contraseña") }
         }
     }
 

@@ -2,6 +2,7 @@ package com.tesis.appmovil.repository
 
 import com.tesis.appmovil.data.remote.ApiService
 import com.tesis.appmovil.data.remote.RetrofitClient
+import com.tesis.appmovil.data.remote.dto.ChangePasswordRequest
 import com.tesis.appmovil.data.remote.dto.UsuarioCreate
 import com.tesis.appmovil.data.remote.dto.UsuarioUpdate
 import com.tesis.appmovil.models.Usuario
@@ -12,10 +13,28 @@ class UsuarioRepository(
     private val api: ApiService = RetrofitClient.api
 ) {
     /** Lista todos los usuarios */
-    suspend fun listar(): List<Usuario> = api.getUsuarios().bodyOrThrow()
+    suspend fun listar(): List<Usuario> {
+        val resp = api.getUsuarios()
+        if (resp.isSuccessful) {
+            val body = resp.body()
+            if (body != null && body.success && body.data != null) {
+                return body.data
+            }
+        }
+        throw HttpException(resp)
+    }
 
     /** Obtiene un usuario por id */
-    suspend fun obtener(id: Int): Usuario = api.getUsuario(id).bodyOrThrow()
+    suspend fun obtener(id: Int): Usuario {
+        val resp = api.getUsuario(id)
+        if (resp.isSuccessful) {
+            val body = resp.body()
+            if (body != null && body.success && body.data != null) {
+                return body.data
+            }
+        }
+        throw HttpException(resp)
+    }
 
     /** Crea un usuario y devuelve el creado */
     suspend fun crear(body: UsuarioCreate): Usuario = api.createUsuario(body).bodyOrThrow()
@@ -28,6 +47,15 @@ class UsuarioRepository(
     suspend fun eliminar(id: Int) {
         val resp = api.deleteUsuario(id)
         if (!resp.isSuccessful) throw HttpException(resp)
+    }
+
+    suspend fun cambiarContrasena(id: Int, current: String, nueva: String) {
+        val resp = api.changePassword(id, ChangePasswordRequest(current, nueva))
+        if (resp.isSuccessful && resp.body()?.success == true) {
+            return
+        } else {
+            throw HttpException(resp)
+        }
     }
 }
 

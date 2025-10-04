@@ -1,7 +1,6 @@
 package com.tesis.appmovil.ui.account
 
 import androidx.compose.foundation.background
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,13 +16,37 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tesis.appmovil.viewmodel.UsuarioViewModel
+import com.tesis.appmovil.data.remote.dto.UsuarioUpdate
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditProfileScreen(nav: NavController) {
-    var name by remember { mutableStateOf(TextFieldValue("Pedro Lopez")) }
-    var email by remember { mutableStateOf(TextFieldValue("example@gmail.com")) }
+fun EditProfileScreen(
+    nav: NavController,
+    usuarioVM: UsuarioViewModel = viewModel()
+) {
+    val uiState by usuarioVM.uiState.collectAsState()
+    val user = uiState.seleccionado
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    var name by remember { mutableStateOf(TextFieldValue("")) }
+    var email by remember { mutableStateOf(TextFieldValue("")) }
     var birthDate by remember { mutableStateOf(TextFieldValue("")) }
+
+    // Cargar datos en los campos cuando cambie el usuario
+    LaunchedEffect(user) {
+        user?.let {
+            name = TextFieldValue(it.nombre ?: "")
+            email = TextFieldValue(it.correo ?: "")
+            birthDate = TextFieldValue(it.fechaNacimiento ?: "")
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -35,15 +58,30 @@ fun EditProfileScreen(nav: NavController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        // Aquí puedes guardar los cambios
-                        nav.popBackStack()
-                    }) {
+                    val saving = uiState.mutando
+                    IconButton(
+                        onClick = {
+                            user?.let {
+                                usuarioVM.actualizarUsuario(
+                                    it.idUsuario,
+                                    UsuarioUpdate(
+                                        nombre = name.text.trim(),
+                                        correo = email.text.trim(),
+                                        fechaNacimiento = birthDate.text.trim()
+                                    )
+                                )
+                                // Navegar directo sin mostrar snackbar aquí
+                                nav.popBackStack("cuenta", inclusive = false)
+                            }
+                        },
+                        enabled = !saving
+                    ) {
                         Icon(Icons.Outlined.Check, contentDescription = "Guardar")
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) } // 👈 importante
     ) { padding ->
         Column(
             modifier = Modifier
@@ -75,7 +113,8 @@ fun EditProfileScreen(nav: NavController) {
                 onValueChange = { name = it },
                 label = { Text("Nombre") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                singleLine = true
             )
 
             Spacer(Modifier.height(16.dp))
@@ -83,9 +122,10 @@ fun EditProfileScreen(nav: NavController) {
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Correo Electrónico") },
+                label = { Text("Correo electrónico") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                singleLine = true
             )
 
             Spacer(Modifier.height(16.dp))
@@ -93,9 +133,10 @@ fun EditProfileScreen(nav: NavController) {
             OutlinedTextField(
                 value = birthDate,
                 onValueChange = { birthDate = it },
-                label = { Text("Fecha de nacimiento") },
+                label = { Text("Fecha de nacimiento (yyyy-MM-dd)") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                singleLine = true
             )
         }
     }
