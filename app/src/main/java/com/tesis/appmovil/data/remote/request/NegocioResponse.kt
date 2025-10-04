@@ -56,11 +56,41 @@ data class ServicioDto(
     val estadoAuditoria: Int,
     val idNegocio: Int
 )
-
 data class HorarioDto(
     val idHorario: Int? = null,
     val diaSemana: String,
-    @SerializedName("hora_apertura") val horaApertura: String,
-    @SerializedName("hora_cierre") val horaCierre: String,
+    val horaApertura: String,
+    val horaCierre: String,
     val estado: Int
-)
+) {
+    // Función para formatear "10:00:00" → "10:00 AM"
+    fun getHoraFormateada(hora: String): String {
+        return try {
+            val partes = hora.split(":")
+            val horas = partes[0].toInt()
+            val minutos = partes[1]
+
+            when {
+                horas == 0 -> "12:$minutos AM"
+                horas < 12 -> "$horas:$minutos AM"
+                horas == 12 -> "12:$minutos PM"
+                else -> "${horas - 12}:$minutos PM"
+            }
+        } catch (e: Exception) {
+            hora // Si hay error, devolver la hora original
+        }
+    }
+
+    fun getHorarioCompleto(): String {
+        return "${getHoraFormateada(horaApertura)} - ${getHoraFormateada(horaCierre)}"
+    }
+}
+//data class HorarioDto(
+//    val idHorario: Int? = null,
+//    val diaSemana: String,
+//    val horaApertura: String, // ✅ SIN SerializedName
+//    val horaCierre: String,    // ✅ SIN SerializedName
+////    @SerializedName("hora_apertura") val horaApertura: String,
+////    @SerializedName("hora_cierre") val horaCierre: String,
+//    val estado: Int
+//)

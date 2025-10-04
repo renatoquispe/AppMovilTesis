@@ -149,7 +149,8 @@ fun MainWithBottomBar() {
         "faq",
         "changePassword",
         "ajustes",
-        "servicios/{negocioId}"
+        "servicios/{negocioId}",
+        "horarios/{negocioId}"
     )
     val showBottomBar = current !in hideBottomBarRoutes
 
@@ -633,6 +634,16 @@ fun MainWithBottomBar() {
                     negocioId = negocioId,
                     navController = innerNav,
                     vm = vm
+                )
+            }
+            composable(
+                route = "horarios/{negocioId}",
+                arguments = listOf(navArgument("negocioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val negocioId = backStackEntry.arguments?.getInt("negocioId") ?: 0
+                BusinessEditSchedule(
+                    negocioId = negocioId,
+                    onBack = { innerNav.popBackStack() }
                 )
             }
 
