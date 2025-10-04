@@ -127,8 +127,8 @@ fun BusinessProfileScreen(
                         vm.actualizarNegocio(
                             negocioId,
                             NegocioUpdate(
-                                id_categoria    = updated.id_categoria,
-                                id_ubicacion    = updated.id_ubicacion,
+                                idCategoria    = updated.id_categoria,
+                                idUbicacion    = updated.id_ubicacion,
                                 nombre          = updated.nombre,
                                 descripcion     = updated.descripcion,
                                 direccion       = updated.direccion,
@@ -136,7 +136,7 @@ fun BusinessProfileScreen(
                                 longitud        = updated.longitud,
                                 telefono        = updated.telefono,
                                 correoContacto  = updated.correo_contacto,
-                                estado_auditoria= null
+                                estadoAuditoria= null
                             )
                         )
                     },

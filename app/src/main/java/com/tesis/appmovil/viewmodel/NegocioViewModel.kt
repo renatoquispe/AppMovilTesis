@@ -128,11 +128,11 @@ class NegocioViewModel(
             _ui.update { it.copy(mutando = true, error = null) }
 
             val negocioCreate = NegocioCreate(
-                id_categoria = idCategoria,
-                id_ubicacion = idUbicacion,
+                idCategoria = idCategoria,
+                idUbicacion = idUbicacion,
                 nombre = nombre,
                 direccion = direccion,
-                id_usuario = idUsuario
+                idUsuario = idUsuario
             )
             println("🔄 Enviando datos al backend: $negocioCreate")
 
@@ -253,7 +253,7 @@ class NegocioViewModel(
             _ui.update { it.copy(mutando = true, error = null) }
 
             val update = NegocioUpdate(
-                estado_auditoria = true // Cambiar a activo
+                estadoAuditoria = true // Cambiar a activo
             )
 
             val negocioActualizado = repo.actualizar(idNegocio, update)
