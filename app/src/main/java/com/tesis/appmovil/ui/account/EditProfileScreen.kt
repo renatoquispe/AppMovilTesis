@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
@@ -13,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -132,11 +134,17 @@ fun EditProfileScreen(
 
             OutlinedTextField(
                 value = birthDate,
-                onValueChange = { birthDate = it },
-                label = { Text("Fecha de nacimiento (yyyy-MM-dd)") },
+                onValueChange = { txt ->
+                    // Permite solo números y guiones en formato yyyy-MM-dd
+                    if (txt.text.matches(Regex("""\d{0,4}(-)?\d{0,2}(-)?\d{0,2}"""))) {
+                        birthDate = txt
+                    }
+                },
+                label = { Text("Fecha de nacimiento") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         }
     }
