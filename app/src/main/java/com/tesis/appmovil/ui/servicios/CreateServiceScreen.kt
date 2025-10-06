@@ -5,11 +5,14 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,6 +24,7 @@ import com.tesis.appmovil.utils.toMultipart
 import com.tesis.appmovil.viewmodel.ServicioViewModel
 import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +51,7 @@ fun CreateServiceScreen(
     val ui by vm.ui.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     var nombre by remember { mutableStateOf("") }
     var precio by remember { mutableStateOf("") }
@@ -54,14 +59,17 @@ fun CreateServiceScreen(
     var descuento by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    var createdOk by remember { mutableStateOf(false) }
 
     val launcher = rememberLauncherForActivityResult(GetContent()) { uri ->
         imageUri = uri
         errorMsg = null
     }
 
-    // 👇 Señal de éxito
-    var createdOk by remember { mutableStateOf(false) }
+    // 👇 Cálculo del precio con descuento
+    val precioConDescuento = remember(descuento, precio) {
+        calcularPrecioConDescuento(precio, descuento)
+    }
 
     // 👇 Navegación cuando se crea exitosamente
     LaunchedEffect(createdOk, ui.mutando, ui.error) {
@@ -81,9 +89,10 @@ fun CreateServiceScreen(
         topBar = { TopAppBar(title = { Text("Nuevo servicio") }) }
     ) { padding ->
         Column(
-            Modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(scrollState)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -114,6 +123,7 @@ fun CreateServiceScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !ui.mutando
             )
+
             OutlinedTextField(
                 value = precio,
                 onValueChange = {
@@ -122,11 +132,12 @@ fun CreateServiceScreen(
                         errorMsg = null
                     }
                 },
-                label = { Text("Precio") },
+                label = { Text("Precio (S/)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !ui.mutando
             )
+
             OutlinedTextField(
                 value = duracion,
                 onValueChange = {
@@ -140,19 +151,117 @@ fun CreateServiceScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !ui.mutando
             )
+
+            // 👇 CAMBIO: Campo de descuento SOLO números enteros (0-70)
             OutlinedTextField(
                 value = descuento,
                 onValueChange = {
-                    if (it.matches(Regex("^\\d*\\.?\\d*\$"))) {
+                    // Solo permite números enteros (0-70) o vacío
+                    // Permite desde 0 para que el usuario pueda escribir 10, 20, etc.
+                    if (it.matches(Regex("^\\d*\$")) && (it.isEmpty() || (it.toInt() in 0..70))) {
                         descuento = it
                         errorMsg = null
                     }
                 },
                 label = { Text("Descuento (%)") },
+                placeholder = { Text("0-70% (máx 70%)") }, // 👈 Cambiado
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !ui.mutando
+                enabled = !ui.mutando,
+                suffix = {
+                    if (descuento.isNotBlank()) Text("%")
+                }
             )
+
+            // 👇 Mostrar cálculo del descuento (solo si descuento > 0)
+            if (descuento.isNotBlank() && descuento.toIntOrNull() ?: 0 > 0 &&
+                precio.isNotBlank() && precio.toDoubleOrNull() != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            "💰 Precio con descuento:",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+
+                        val precioOriginal = precio.toDouble()
+                        val precioFinal = precioConDescuento
+                        val ahorro = precioOriginal - precioFinal
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                "Precio original:",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                "S/ ${String.format("%.2f", precioOriginal)}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                "Descuento:",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                "$descuento%",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                "Precio final:",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            Text(
+                                "S/ ${String.format("%.2f", precioFinal)}",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+
+                        if (ahorro > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    "Ahorro:",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    "S/ ${String.format("%.2f", ahorro)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             // Mostrar errores de validación
             errorMsg?.let {
@@ -193,10 +302,22 @@ fun CreateServiceScreen(
                                 errorMsg = "Duración inválida"
                                 return@Button
                             }
-                            descuento.isNotBlank() && descuento.toDoubleOrNull() == null -> {
-                                errorMsg = "Descuento inválido"
+                            descuento.isNotBlank() && descuento.toIntOrNull() == null -> {
+                                errorMsg = "Descuento debe ser un número entero"
                                 return@Button
                             }
+                            // 👇 CAMBIO: Validación 0-70%
+                            descuento.isNotBlank() && descuento.toInt() !in 0..70 -> {
+                                errorMsg = "El descuento debe estar entre 0% y 70%"
+                                return@Button
+                            }
+                        }
+
+                        // 👇 Convertir descuento para BD (entero → decimal)
+                        val descuentoParaBD = if (descuento.isNotBlank() && descuento.toInt() > 0) {
+                            descuento.toInt() / 100.0  // 20 → 0.20
+                        } else {
+                            null
                         }
 
                         val dto = ServicioCreate(
@@ -204,14 +325,14 @@ fun CreateServiceScreen(
                             nombre = nombre.trim(),
                             precio = precio.toDouble(),
                             duracionMinutos = duracion.toInt(),
-                            descuento = descuento.toDoubleOrNull(),
-                            imagenUrl = null // 👈 Se subirá después de crear el servicio
+                            descuento = descuentoParaBD, // 👈 Ya convertido a 0.20
+                            imagenUrl = null
                         )
 
                         // Llamar al ViewModel dentro de una corrutina
                         scope.launch {
                             try {
-                                // Convertir la imagen a Multipart si existe (esto ahora es suspend)
+                                // Convertir la imagen a Multipart si existe
                                 val part = imageUri?.let { uri ->
                                     try {
                                         uri.toMultipart(context, "imagen")
@@ -229,7 +350,6 @@ fun CreateServiceScreen(
 
                                 // Llamar al ViewModel
                                 vm.crearYSubirImagen(dto, part) { servicioCreado ->
-                                    // Este callback se ejecuta cuando el servicio se crea exitosamente
                                     createdOk = true
                                 }
                             } catch (e: Exception) {
@@ -248,6 +368,9 @@ fun CreateServiceScreen(
                 }
             }
 
+            // 👇 Espacio extra al final para mejor scroll
+            Spacer(Modifier.height(16.dp))
+
             // Mostrar error del ViewModel si existe
             ui.error?.let { err ->
                 Spacer(Modifier.height(8.dp))
@@ -257,138 +380,12 @@ fun CreateServiceScreen(
     }
 }
 
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Composable
-//fun CreateServiceScreen(
-//    negocioId: Int,
-//    vm: ServicioViewModel = viewModel(),
-//    navController: NavController
-//) {
-//    val ui by vm.ui.collectAsState()
-//    val context = LocalContext.current
-//    val scope = rememberCoroutineScope()
-//
-//    var nombre by remember { mutableStateOf("") }
-//    var precio by remember { mutableStateOf("") }
-//    var duracion by remember { mutableStateOf("") }
-//    var descuento by remember { mutableStateOf("") }
-//    var imageUri by remember { mutableStateOf<Uri?>(null) }
-//    val launcher = rememberLauncherForActivityResult(GetContent()) { uri ->
-//        imageUri = uri
-//    }
-//
-//    val refreshSignal = navController?.currentBackStackEntry
-//        ?.savedStateHandle
-//        ?.getStateFlow("refresh_servicios", false)
-//        ?.collectAsState()
-//
-//    LaunchedEffect(refreshSignal?.value) {
-//        if (refreshSignal?.value == true) {
-//            vm.cargarServicios(negocioId) // recarga
-//            navController?.currentBackStackEntry
-//                ?.savedStateHandle
-//                ?.set("refresh_servicios", false) // consumir señal
-//        }
-//    }
-//
-//
-//    // Navegar atrás cuando termine de crear+y subir y no haya error
-//    LaunchedEffect(ui.mutando, ui.error) {
-//        if (!ui.mutando && ui.error == null && ui.servicios.any { it.nombre == nombre }) {
-//            navController.popBackStack()
-//        }
-//    }
-//
-//    Scaffold(
-//        topBar = { TopAppBar(title = { Text("Nuevo servicio") }) }
-//    ) { padding ->
-//        Column(
-//            Modifier
-//                .fillMaxSize()
-//                .padding(padding)
-//                .padding(16.dp),
-//            verticalArrangement = Arrangement.spacedBy(12.dp)
-//        ) {
-//            // Selector de imagen
-//            OutlinedButton(onClick = { launcher.launch("image/*") }) {
-//                Text("Seleccionar imagen", fontSize = 14.sp)
-//            }
-//            imageUri?.let { uri ->
-//                AsyncImage(
-//                    model = uri,
-//                    contentDescription = "Preview",
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .height(200.dp)
-//                )
-//            }
-//
-//            // Campos de texto
-//            OutlinedTextField(
-//                value = nombre,
-//                onValueChange = { nombre = it },
-//                label = { Text("Nombre") },
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//            OutlinedTextField(
-//                value = precio,
-//                onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) precio = it },
-//                label = { Text("Precio") },
-//                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//            OutlinedTextField(
-//                value = duracion,
-//                onValueChange = { if (it.matches(Regex("^\\d*\$"))) duracion = it },
-//                label = { Text("Duración (min)") },
-//                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//            OutlinedTextField(
-//                value = descuento,
-//                onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d*\$"))) descuento = it },
-//                label = { Text("Descuento (%)") },
-//                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//
-//            Spacer(Modifier.weight(1f))
-//
-//            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-//                TextButton(onClick = { navController.popBackStack() }) {
-//                    Text("Cancelar")
-//                }
-//                Button(onClick = {
-//                    val dto = ServicioCreate(
-//                        idNegocio = negocioId,
-//                        nombre = nombre,
-//                        precio = precio.toDoubleOrNull() ?: 0.0,
-//                        duracionMinutos = duracion.toIntOrNull(),
-//                        descuento = descuento.toDoubleOrNull(),
-//                        imagenUrl = null
-//                    )
-//                    scope.launch {
-//                        try {
-//                            val part = imageUri?.toMultipart(context, "imagen")
-//                            vm.crearYSubirImagen(dto, part)
-//                        } catch (e: Exception) {
-//                            Log.e("CreateService", "Error creando/subiendo", e)
-//                        }
-//                    }
-//                }) {
-//                    if (ui.mutando) {
-//                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
-//                    } else {
-//                        Text("Guardar")
-//                    }
-//                }
-//            }
-//
-//            // Mostrar error si existe
-//            ui.error?.let { err ->
-//                Spacer(Modifier.height(8.dp))
-//                Text(text = "¡Error! $err", color = MaterialTheme.colorScheme.error)
-//            }
-//        }
-//    }
-//}
+// 👇 FUNCIÓN AUXILIAR
+private fun calcularPrecioConDescuento(precio: String, descuento: String): Double {
+    val precioNum = precio.toDoubleOrNull() ?: 0.0
+    if (descuento.isBlank() || descuento.toIntOrNull() ?: 0 == 0) return precioNum
+
+    // Descuento ya es entero (20), lo convertimos a decimal (0.20)
+    val descuentoDecimal = descuento.toInt() / 100.0
+    return precioNum * (1 - descuentoDecimal)
+}

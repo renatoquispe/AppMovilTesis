@@ -486,16 +486,32 @@ fun MainWithBottomBar() {
                         innerNav.getBackStackEntry("registerBusinessFlow")
                     }
                     val negocioVM: NegocioViewModel = viewModel(parentEntry)
+                    val authVM: AuthViewModel = viewModel() // 👈 Obtener AuthViewModel
+
                     BusinessReadyScreen(
                         negocioViewModel = negocioVM,
+                        authViewModel = authVM, // 👈 Pasar AuthViewModel
+                        navController = innerNav,
                         onPublish = {
-                            innerNav.navigate(Dest.Home.route) {
-                                popUpTo(Dest.Home.route) { inclusive = true }
-                                launchSingleTop = true
-                            }
+                            // Opcional: puedes mantener esto para otras acciones
                         }
                     )
                 }
+//                composable(Dest.BusinessReady.route) { backStackEntry ->
+//                    val parentEntry = remember(backStackEntry) {
+//                        innerNav.getBackStackEntry("registerBusinessFlow")
+//                    }
+//                    val negocioVM: NegocioViewModel = viewModel(parentEntry)
+//                    BusinessReadyScreen(
+//                        negocioViewModel = negocioVM,
+//                        onPublish = {
+//                            innerNav.navigate(Dest.Home.route) {
+//                                popUpTo(Dest.Home.route) { inclusive = true }
+//                                launchSingleTop = true
+//                            }
+//                        }
+//                    )
+//                }
             }
 
             composable(Dest.Servicios.route) {
