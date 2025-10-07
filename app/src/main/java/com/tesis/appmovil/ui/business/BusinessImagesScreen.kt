@@ -55,10 +55,10 @@ fun BusinessImagesScreen(
     val uiState by negocioViewModel.ui.collectAsState()
 
 
-    // Estado para el permiso de lectura de almacenamiento
-    val permissionState = rememberPermissionState(
-        permission = Manifest.permission.READ_EXTERNAL_STORAGE
-    )
+    /*PERMISOS COMENTADOS prueba // Estado para el permiso de lectura de almacenamiento
+     val permissionState = rememberPermissionState(
+         permission = Manifest.permission.READ_EXTERNAL_STORAGE
+     )*/
 
     // Lanzador para seleccionar múltiples imágenes
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -113,18 +113,15 @@ fun BusinessImagesScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // Botón para elegir archivo - estilo similar a Figma
+        // Botón para elegir archivo
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(120.dp)
                 .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
                 .clickable {
-                    if (permissionState.status.isGranted) {
-                        galleryLauncher.launch("image/*")
-                    } else {
-                        permissionState.launchPermissionRequest()
-                    }
+                    // Abre el selector del sistema (Photo Picker moderno)
+                    galleryLauncher.launch("image/*")
                 },
             contentAlignment = Alignment.Center
         ) {

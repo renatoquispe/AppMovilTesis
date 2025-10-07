@@ -4,6 +4,8 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -19,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -31,8 +34,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.airbnb.lottie.compose.*
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -52,6 +57,7 @@ data class LocalService(
     val id: Int,
     val nombre: String,
     val precio: Double,
+    val negocioId: Int?,
     val negocioNombre: String?,
     val direccion: String?,
     val distanceKm: Double? = null
@@ -87,13 +93,13 @@ private fun catNameOf(any: Any?): String? = when (any) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
-fun ChatBotScreen() {
+fun ChatBotScreen(navController: NavController? = null) {
     val api = RetrofitClient.api
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
 
     var step by remember { mutableStateOf(Step.GREETING) }
-    var lastStep by remember { mutableStateOf(step) } // para dirección de la animación
+    var lastStep by remember { mutableStateOf(step) }
 
     var useCurrentLocation by remember { mutableStateOf<Boolean?>(null) }
     var typedAddress by remember { mutableStateOf("") }
@@ -126,9 +132,8 @@ fun ChatBotScreen() {
     suspend fun fallbackCategoriasDesdeServicios(): List<LocalCategory> {
         return try {
             val sResp = api.getServicios()
-            if (!sResp.isSuccessful) {
-                emptyList()
-            } else {
+            if (!sResp.isSuccessful) emptyList()
+            else {
                 val data = sResp.body()?.data ?: emptyList<Servicio>()
                 val mapa = LinkedHashMap<Int, String>()
                 data.forEach { s ->
@@ -138,9 +143,7 @@ fun ChatBotScreen() {
                 }
                 mapa.map { (id, nombre) -> LocalCategory(id, nombre) }
             }
-        } catch (_: Exception) {
-            emptyList()
-        }
+        } catch (_: Exception) { emptyList() }
     }
 
     suspend fun fetchCategoriesOnce(): List<LocalCategory> {
@@ -179,13 +182,13 @@ fun ChatBotScreen() {
         }
     )
 
-    // ----------- UI con fondo degradado ----------- //
-    // Paleta clara/unisex
+    // ----------- Fondo degradado llamativo -----------
     val bg = Brush.verticalGradient(
         listOf(
-            Color(0xFFF0F7FF),  // azul muy claro
-            Color(0xFFF7F2FF),  // lila super suave
-            Color(0xFFFAFDF6)   // verdoso pastel
+            Color(0xFF0E1B4D),
+            Color(0xFF4F46E5),
+            Color(0xFF7C3AED),
+            Color(0xFFEDE9FE)
         )
     )
 
@@ -220,7 +223,6 @@ fun ChatBotScreen() {
             )
         }
     ) { padding ->
-        // Capa de fondo + “tarjeta” de chat ligera
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -231,21 +233,20 @@ fun ChatBotScreen() {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(12.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f),
-                tonalElevation = 1.dp,
+                color = Color.White.copy(alpha = 0.14f),
+                tonalElevation = 0.dp,
                 shape = RoundedCornerShape(24.dp)
             ) {
-                // --- CONTENIDO con animación entre pasos ---
                 AnimatedContent(
                     targetState = step,
                     transitionSpec = {
                         val forward = targetState.ordinal > initialState.ordinal
                         val offset = if (forward) { { full: Int -> full / 3 } } else { { full: Int -> -full / 3 } }
-                        (slideInHorizontally(animationSpec = tween(350, easing = FastOutSlowInEasing), initialOffsetX = offset)
-                                + fadeIn(animationSpec = tween(250)))
+                        (slideInHorizontally(tween(350, easing = FastOutSlowInEasing), initialOffsetX = offset) +
+                                fadeIn(tween(250)))
                             .togetherWith(
-                                slideOutHorizontally(animationSpec = tween(300), targetOffsetX = offset)
-                                        + fadeOut(animationSpec = tween(200))
+                                slideOutHorizontally(tween(300), targetOffsetX = offset) +
+                                        fadeOut(tween(200))
                             )
                     },
                     modifier = Modifier
@@ -311,15 +312,17 @@ fun ChatBotScreen() {
                                                         val nombre = (item["nombre"] as? String) ?: ""
                                                         val precio = (item["precio"] as? Number)?.toDouble() ?: 0.0
                                                         val negocioMap = item["negocio"] as? Map<*, *>
+                                                        val negocioId = (negocioMap?.get("idNegocio") as? Number)?.toInt()
                                                         val negocioNombre = negocioMap?.get("nombre") as? String
                                                         val direccion = negocioMap?.get("direccion") as? String
                                                         val dist = (item["distanceKm"] as? Number)?.toDouble()
-                                                        list.add(LocalService(id, nombre, precio, negocioNombre, direccion, dist))
+                                                        list.add(LocalService(id, nombre, precio, negocioId, negocioNombre, direccion, dist))
                                                     }
                                                     is Servicio -> {
                                                         val id = item.idServicio
                                                         val nombre = item.nombre ?: ""
                                                         val precio = runCatching { item.precio.toDouble() }.getOrDefault(0.0)
+                                                        val negocioId = item.negocio?.idNegocio
                                                         val negocioNombre = item.negocio?.nombre
                                                         val direccion = item.negocio?.direccion
                                                         val dist = runCatching {
@@ -327,7 +330,7 @@ fun ChatBotScreen() {
                                                             f.isAccessible = true
                                                             (f.get(item) as? Number)?.toDouble()
                                                         }.getOrNull()
-                                                        list.add(LocalService(id, nombre, precio, negocioNombre, direccion, dist))
+                                                        list.add(LocalService(id, nombre, precio, negocioId, negocioNombre, direccion, dist))
                                                     }
                                                 }
                                             }
@@ -344,24 +347,25 @@ fun ChatBotScreen() {
                         )
                         Step.RESULTS -> ResultsStep(
                             results = results,
-                            onNewSearch = { lastStep = step; step = Step.LOCATION_CHOICE }
+                            onNewSearch = { lastStep = step; step = Step.LOCATION_CHOICE },
+                            onOpenBusiness = { negocioId, nombre ->
+                                openBusiness(ctx, navController, negocioId, nombre)
+                            }
                         )
                     }
                 }
             }
-
-            // --- Overlay de carga bonito (Lottie) ---
             LoaderOverlay(show = loadingCats || loadingResults)
         }
     }
 }
 
-/* ===================== Pasos con pequeñas animaciones internas ===================== */
+/* ===================== Pasos ===================== */
 
 @Composable
 private fun GreetingStep(onNext: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
-        BotBubble(icon = { AssistantIcon(28.dp) }, text = "Hola 👋 soy BellaBot. ¿Quieres empezar?")
+        BotBubble(icon = { AssistantIcon() }, text = "Hola 👋 soy BellaBot. ¿Quieres empezar?")
         Spacer(Modifier.height(12.dp))
         PrimaryButton("Sí, vamos", Icons.Outlined.Send, onNext)
     }
@@ -374,7 +378,7 @@ private fun LocationChoiceStep(
     onTypeOther: () -> Unit
 ) {
     Column(Modifier.fillMaxSize()) {
-        BotBubble(icon = { Icon(Icons.Outlined.LocationOn, null) }, text = "¿Deseas usar tu ubicación actual o escribir otra?")
+        BotBubble(icon = { AssistantIcon() }, text = "¿Deseas usar tu ubicación actual o escribir otra?")
         Spacer(Modifier.height(12.dp))
         SelectorRow(selected = useCurrentLocation == true, icon = Icons.Outlined.MyLocation, label = "Usar mi ubicación actual", onClick = onUseCurrent)
         Spacer(Modifier.height(6.dp))
@@ -389,7 +393,7 @@ private fun LocationInputStep(
     onNext: () -> Unit
 ) {
     Column(Modifier.fillMaxSize()) {
-        BotBubble(icon = { Icon(Icons.Outlined.LocationOn, null) }, text = "Escribe tu distrito/dirección 🧭")
+        BotBubble(icon = { AssistantIcon() }, text = "Escribe tu distrito/dirección 🧭")
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = typedAddress,
@@ -416,7 +420,7 @@ private fun CategoryStep(
     LaunchedEffect(Unit) { loadOnce() }
 
     Column(Modifier.fillMaxSize()) {
-        BotBubble(icon = { Icon(Icons.Outlined.Category, null) }, text = "¿Qué servicio buscas? Elige una categoría 🧩")
+        BotBubble(icon = { AssistantIcon() }, text = "¿Qué servicio buscas? Elige una categoría 🧩")
         Spacer(Modifier.height(10.dp))
 
         if (loading) {
@@ -455,11 +459,27 @@ private fun BudgetStep(
     errorMsg: String?
 ) {
     Column(Modifier.fillMaxSize()) {
-        BotBubble(icon = { Icon(Icons.Outlined.Money, null) }, text = "Define tu presupuesto (opcional) 💸")
+        BotBubble(icon = { AssistantIcon() }, text = "Define tu presupuesto (opcional) 💸")
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(value = priceMinText, onValueChange = onMinChange, label = { Text("Desde") }, leadingIcon = { Icon(Icons.Outlined.Money, null) }, modifier = Modifier.weight(1f))
-            OutlinedTextField(value = priceMaxText, onValueChange = onMaxChange, label = { Text("Hasta") }, leadingIcon = { Icon(Icons.Outlined.Money, null) }, modifier = Modifier.weight(1f))
+            OutlinedTextField(
+                value = priceMinText,
+                onValueChange = onMinChange,
+                label = { Text("Desde") },
+                leadingIcon = { Icon(Icons.Outlined.Money, null) },
+                modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = priceMaxText,
+                onValueChange = onMaxChange,
+                label = { Text("Hasta") },
+                leadingIcon = { Icon(Icons.Outlined.Money, null) },
+                modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
         }
         Spacer(Modifier.height(12.dp))
         PrimaryButton("Buscar servicios", Icons.Outlined.Send, onSearch)
@@ -470,8 +490,11 @@ private fun BudgetStep(
 @Composable
 private fun ResultsStep(
     results: List<LocalService>,
-    onNewSearch: () -> Unit
+    onNewSearch: () -> Unit,
+    onOpenBusiness: (negocioId: Int?, nombre: String?) -> Unit
 ) {
+    val context = LocalContext.current   // 👈 LEE AQUÍ el contexto (no dentro de onClick)
+
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier.fillMaxWidth(),
@@ -482,14 +505,70 @@ private fun ResultsStep(
             Text("Resultados: ${results.size}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(8.dp))
+
         if (results.isEmpty()) {
             AssistantHint("No se encontraron servicios cerca. 🕵️‍♀️")
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(results) { s -> ResultCard(s) }
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                items(results) { s ->
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = Color.White.copy(alpha = 0.85f)
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(s.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                            Spacer(Modifier.height(6.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.Money, null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Precio: S/ ${"%.2f".format(s.precio)}")
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.Storefront, null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Negocio: ${s.negocioNombre ?: "—"}")
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.LocationOn, null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Dirección: ${s.direccion ?: "—"}")
+                            }
+
+                            Spacer(Modifier.height(12.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedButton(
+                                    onClick = { onOpenBusiness(s.negocioId, s.negocioNombre) },
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Icon(Icons.Outlined.Storefront, null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Ver negocio")
+                                }
+                                OutlinedButton(
+                                    onClick = { openMaps(context, s.direccion, s.negocioNombre) }, // 👈 uso el val context
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Icon(Icons.Outlined.Map, null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Cómo llegar")
+                                }
+                                OutlinedButton(
+                                    onClick = { shareResult(context, s) }, // 👈 uso el val context
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Icon(Icons.Outlined.Share, null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Compartir")
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         PrimaryButton("Nueva búsqueda", Icons.Outlined.Send, onNewSearch)
     }
 }
@@ -509,7 +588,6 @@ private fun LoaderOverlay(show: Boolean) {
                 .background(Color.Black.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
-            // Puedes cambiar bellabot por un loader dedicado si luego agregas otro JSON
             val comp by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.bellabot))
             val progress by animateLottieCompositionAsState(comp, iterations = LottieConstants.IterateForever)
             LottieAnimation(composition = comp, progress = { progress }, modifier = Modifier.size(120.dp))
@@ -535,15 +613,21 @@ private fun BellaIcon(sizeDp: Dp = 24.dp, play: Boolean = true) {
     )
 }
 
-// Icono de burbuja (asistente.json)
+// Icono de burbuja (asistente.json) — 68dp fijo
 @Composable
-private fun AssistantIcon(sizeDp: Dp = 28.dp, play: Boolean = true) {
+private fun AssistantIcon(sizeDp: Dp = 68.dp, play: Boolean = true) {
     val comp by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.asistente))
-    val progress by animateLottieCompositionAsState(composition = comp, iterations = LottieConstants.IterateForever, isPlaying = play)
+    val progress by animateLottieCompositionAsState(
+        composition = comp,
+        iterations = LottieConstants.IterateForever,
+        isPlaying = play
+    )
     LottieAnimation(
         composition = comp,
         progress = { progress },
-        modifier = Modifier.size(sizeDp).clip(CircleShape),
+        modifier = Modifier
+            .size(sizeDp)
+            .clip(CircleShape),
         contentScale = ContentScale.Crop
     )
 }
@@ -555,7 +639,7 @@ private fun BotBubble(icon: @Composable () -> Unit, text: String) {
         Spacer(Modifier.width(8.dp))
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+            color = Color.White.copy(alpha = 0.9f)
         ) {
             Text(text = text, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
         }
@@ -567,7 +651,7 @@ private fun AssistantHint(text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         BellaIcon()
         Spacer(Modifier.width(8.dp))
-        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text, color = Color.White)
     }
 }
 
@@ -588,13 +672,14 @@ private fun SelectorRow(
     Surface(
         tonalElevation = if (selected) 4.dp else 0.dp,
         shape = RoundedCornerShape(14.dp),
-        modifier = Modifier.fillMaxWidth().clickable { onClick() }
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        color = Color.White.copy(alpha = if (selected) 0.35f else 0.25f)
     ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null)
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(10.dp))
             Text(label, modifier = Modifier.weight(1f))
             RadioButton(selected = selected, onClick = onClick)
@@ -602,34 +687,51 @@ private fun SelectorRow(
     }
 }
 
-@Composable
-private fun ResultCard(s: LocalService) {
-    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)) {
-        Column(Modifier.padding(14.dp)) {
-            Text(text = s.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Money, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(6.dp))
-                Text("Precio: S/ ${"%.2f".format(s.precio)}")
-            }
-            Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Storefront, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(6.dp))
-                Text("Negocio: ${s.negocioNombre ?: "—"}")
-            }
-            Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.LocationOn, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(6.dp))
-                Text("Dirección: ${s.direccion ?: "—"}")
-            }
-            if (s.distanceKm != null) {
-                Spacer(Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.MyLocation, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(6.dp))
-                    Text("A ${"%.1f".format(s.distanceKm)} km")
-                }
-            }
-        }
+/* ===== Helpers de acciones ===== */
+
+private fun openMaps(ctx: Context, direccion: String?, nombre: String?) {
+    val q = (nombre?.let { "$it, " } ?: "") + (direccion ?: "")
+    if (q.isBlank()) {
+        Toast.makeText(ctx, "Sin dirección para navegar", Toast.LENGTH_SHORT).show()
+        return
+    }
+    val uri = Uri.parse("geo:0,0?q=${Uri.encode(q)}")
+    val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+        setPackage("com.google.android.apps.maps")
+    }
+    runCatching { ctx.startActivity(intent) }
+        .onFailure { Toast.makeText(ctx, "No se pudo abrir Maps", Toast.LENGTH_SHORT).show() }
+}
+
+private fun shareResult(ctx: Context, s: LocalService) {
+    val text = buildString {
+        append("Servicio: ${s.nombre}\n")
+        append("Precio: S/ ${"%.2f".format(s.precio)}\n")
+        if (!s.negocioNombre.isNullOrBlank()) append("Negocio: ${s.negocioNombre}\n")
+        if (!s.direccion.isNullOrBlank()) append("Dirección: ${s.direccion}")
+    }
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    ctx.startActivity(Intent.createChooser(send, "Compartir servicio"))
+}
+
+private fun openBusiness(ctx: Context, navController: NavController?, negocioId: Int?, @Suppress("UNUSED_PARAMETER") nombre: String?) {
+    if (negocioId == null) {
+        Toast.makeText(ctx, "No se encontró el negocio", Toast.LENGTH_SHORT).show()
+        return
+    }
+    if (navController != null) {
+        navController.navigate("businessDetail/$negocioId")
+        return
+    }
+    runCatching {
+        val clazz = Class.forName("com.tesis.appmovil.ui.business.BusinessDetailActivity")
+        val i = Intent(ctx, clazz).apply { putExtra("idNegocio", negocioId) }
+        ctx.startActivity(i)
+    }.onFailure {
+        Toast.makeText(ctx, "Busca el negocio (id=$negocioId) desde Inicio", Toast.LENGTH_SHORT).show()
     }
 }
 

@@ -1,206 +1,3 @@
-/*
-package com.tesis.appmovil.ui.business
-
-import android.Manifest
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
-import com.google.maps.android.compose.*
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.tesis.appmovil.viewmodel.NegocioViewModel
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
-
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
-@Composable
-fun BusinessLocationScreen(
-    negocioViewModel: NegocioViewModel, // ← Agregar este parámetro
-    onLocationSelected: (LatLng) -> Unit,
-    onBack: () -> Unit
-) {
-    // Ubicación inicial (Lima, Perú)
-    val defaultLocation = remember { LatLng(-12.0464, -77.0428) }
-    var selectedLocation by remember { mutableStateOf<LatLng?>(null) }
-    var showInstructions by remember { mutableStateOf(true) }
-
-    // Estado para la cámara del mapa
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(defaultLocation, 12f)
-    }
-
-    // Permisos de ubicación
-    val locationPermissionState = rememberPermissionState(
-        Manifest.permission.ACCESS_FINE_LOCATION
-    )
-
-    val scope = rememberCoroutineScope()
-    val ui by negocioViewModel.ui.collectAsState()
-
-
-    // Modal de instrucciones inicial
-    if (showInstructions) {
-        Dialog(onDismissRequest = { showInstructions = false }) {
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = "Ubicación en el mapa",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    Text(
-                        text = "Selecciona la ubicación exacta de tu negocio.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 24.dp)
-                    )
-
-                    Button(
-                        onClick = { showInstructions = false },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp), // Botón más alto
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5C1349))
-                    ) {
-                        Text("ENTENDIDO", style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-            }
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Ubicación del negocio",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Regresar"
-                        )
-                    }
-                }
-            )
-        },
-        bottomBar = {
-            // Botón en el bottom bar para mejor visibilidad
-            Surface(
-                tonalElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Button(
-                    onClick = {
-                        val latLng = selectedLocation
-                        if (latLng == null) return@Button
-
-                        // Tomamos el id desde el VM: primero el recién creado, si no, el seleccionado
-                        val idNegocio = ui.negocioCreadoId ?: ui.seleccionado?.id_negocio
-                        if (idNegocio == null) {
-                            // Si no tenemos id, muestra un log o snackbar
-                            println("❌ No se encontró idNegocio en el ViewModel (negocioCreadoId/seleccionado)")
-                            return@Button
-                        }
-
-                        scope.launch {
-                            val r = negocioViewModel.actualizarUbicacionExacta(
-                                idNegocio = idNegocio,
-                                latitud = latLng.latitude,
-                                longitud = latLng.longitude
-                            )
-                            if (r.isSuccess) {
-                                // Notifica arriba o navega al siguiente paso
-                                onLocationSelected(latLng)
-                            } else {
-                                println("❌ Error al guardar ubicación: ${r.exceptionOrNull()?.message}")
-                            }
-                        }
-                    }
-                    ,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp) // Botón más alto
-                        .padding(16.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5C1349)),
-                    enabled = selectedLocation != null
-                ) {
-                    Text(
-                        text = if (selectedLocation != null) {
-                            "GUARDAR Y CONTINUAR →"
-                        } else {
-                            "SELECCIONA UNA UBICACIÓN"
-                        },
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 2 // Permite texto en dos líneas si es necesario
-                    )
-                }
-            }
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                properties = MapProperties(
-                    isMyLocationEnabled = locationPermissionState.status.isGranted,
-                    latLngBoundsForCameraTarget = LatLngBounds(
-                        LatLng(-12.2, -77.2), // Suroeste de Lima
-                        LatLng(-11.8, -76.8)  // Noreste de Lima
-                    )
-                ),
-                uiSettings = MapUiSettings(
-                    zoomControlsEnabled = true,
-                    myLocationButtonEnabled = locationPermissionState.status.isGranted,
-                    compassEnabled = false
-                ),
-                onMapClick = { latLng ->
-                    selectedLocation = latLng
-                    println("📍 Ubicación seleccionada: Lat=${latLng.latitude}, Lng=${latLng.longitude}")
-                }
-            ) {
-                // Marcador SOLO aparece después del click
-                selectedLocation?.let { location ->
-                    Marker(
-                        state = MarkerState(position = location),
-                        title = "Ubicación del negocio",
-                        snippet = "Lat: ${"%.6f".format(location.latitude)}, Lng: ${"%.6f".format(location.longitude)}",
-                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE)
-                    )
-                }
-            }
-        }
-    }
-}*/
 package com.tesis.appmovil.ui.business
 
 import android.Manifest
@@ -245,10 +42,7 @@ import java.util.Locale
 import kotlin.coroutines.resume
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
-
-// Para CameraUpdateFactory (Maps clásico)
 import com.google.android.gms.maps.CameraUpdateFactory
-
 import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
@@ -275,10 +69,8 @@ fun BusinessLocationScreen(
     }
 
     val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
-    // Leemos el estado del VM para obtener el id del negocio
     val ui by negocioViewModel.ui.collectAsState()
 
-    // Modal inicial
     if (showInstructions) {
         Dialog(onDismissRequest = { showInstructions = false }) {
             Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
@@ -333,15 +125,14 @@ fun BusinessLocationScreen(
     ) { paddingValues ->
         Box(Modifier.fillMaxSize().padding(paddingValues)) {
 
-            // ======= MAPA =======
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
                 properties = MapProperties(
                     isMyLocationEnabled = locationPermissionState.status.isGranted,
                     latLngBoundsForCameraTarget = LatLngBounds(
-                        LatLng(-12.2, -77.2), // Suroeste de Lima
-                        LatLng(-11.8, -76.8)  // Noreste de Lima
+                        LatLng(-12.2, -77.2),
+                        LatLng(-11.8, -76.8)
                     )
                 ),
                 uiSettings = MapUiSettings(
@@ -352,46 +143,36 @@ fun BusinessLocationScreen(
                 onMapClick = { latLng ->
                     selectedLocation = latLng
                     searchError = null
-
-                    // ⬇️ Guardar en BD
                     val idNegocio = ui.negocio?.id_negocio ?: ui.negocioCreadoId
                     if (idNegocio != null) {
                         scope.launch {
-                            val r = negocioViewModel.actualizarUbicacionExacta(
+                            negocioViewModel.actualizarUbicacionExacta(
                                 idNegocio = idNegocio,
                                 latitud = latLng.latitude,
                                 longitud = latLng.longitude
                             )
-                            if (r.isSuccess) {
-                                println("✅ Guardado por toque en mapa")
-                            } else {
-                                println("❌ Error guardando: ${r.exceptionOrNull()?.message}")
-                            }
                         }
-                    } else {
-                        println("❌ idNegocio null (ui.negocio?.id_negocio / ui.negocioCreadoId)")
                     }
                 }
-
             ) {
                 selectedLocation?.let { location ->
                     Marker(
                         state = MarkerState(position = location),
                         title = "Ubicación del negocio",
+                        // ↓ Se mantiene el snippet para depuración interna, no visible en lista
                         snippet = "Lat: ${"%.6f".format(location.latitude)}, Lng: ${"%.6f".format(location.longitude)}",
                         icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE)
                     )
                 }
             }
 
-            // ======= BUSCADOR (overlay arriba) =======
+            // ======= BUSCADOR =======
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Caja con sombra para el buscador
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -408,9 +189,7 @@ fun BusinessLocationScreen(
                         },
                         placeholder = { Text("Buscar dirección…") },
                         singleLine = true,
-                        leadingIcon = {
-                            Icon(Icons.Filled.Search, contentDescription = "Buscar")
-                        },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Buscar") },
                         trailingIcon = {
                             if (query.isNotBlank()) {
                                 IconButton(onClick = {
@@ -443,28 +222,18 @@ fun BusinessLocationScreen(
                                                         CameraUpdateFactory.newLatLngZoom(latLng, 16f)
                                                     )
                                                 }
-
-                                                // ⬇️ Guardar en BD
                                                 val idNegocio = ui.negocio?.id_negocio ?: ui.negocioCreadoId
                                                 if (idNegocio != null) {
                                                     scope.launch {
-                                                        val r = negocioViewModel.actualizarUbicacionExacta(
+                                                        negocioViewModel.actualizarUbicacionExacta(
                                                             idNegocio = idNegocio,
                                                             latitud = latLng.latitude,
                                                             longitud = latLng.longitude
                                                         )
-                                                        if (r.isSuccess) {
-                                                            println("✅ Guardado por búsqueda (1ª coincidencia)")
-                                                        } else {
-                                                            println("❌ Error guardando: ${r.exceptionOrNull()?.message}")
-                                                        }
                                                     }
-                                                } else {
-                                                    println("❌ idNegocio null (ui.negocio?.id_negocio / ui.negocioCreadoId)")
                                                 }
                                             }
                                         }
-
                                     )
                                 }
                             }
@@ -474,7 +243,7 @@ fun BusinessLocationScreen(
                     )
                 }
 
-                // Lista de resultados (sencilla)
+                // ======= LISTA DE RESULTADOS =======
                 if (results.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
                     Surface(
@@ -502,38 +271,22 @@ fun BusinessLocationScreen(
                                                     CameraUpdateFactory.newLatLngZoom(latLng, 16f)
                                                 )
                                             }
-
-                                            // ⬇️ Guardar en BD
                                             val idNegocio = ui.negocio?.id_negocio ?: ui.negocioCreadoId
                                             if (idNegocio != null) {
                                                 scope.launch {
-                                                    val r = negocioViewModel.actualizarUbicacionExacta(
+                                                    negocioViewModel.actualizarUbicacionExacta(
                                                         idNegocio = idNegocio,
                                                         latitud = latLng.latitude,
                                                         longitud = latLng.longitude
                                                     )
-                                                    if (r.isSuccess) {
-                                                        println("✅ Guardado por selección de resultado")
-                                                    } else {
-                                                        println("❌ Error guardando: ${r.exceptionOrNull()?.message}")
-                                                    }
                                                 }
-                                            } else {
-                                                println("❌ idNegocio null (ui.negocio?.id_negocio / ui.negocioCreadoId)")
                                             }
-
-                                            // Cerrar lista tras seleccionar
                                             results = emptyList()
                                         }
-
                                         .padding(12.dp)
                                 ) {
                                     Text(line, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        "Lat ${"%.5f".format(addr.latitude)}, Lng ${"%.5f".format(addr.longitude)}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.Gray
-                                    )
+                                    // ⬇️ Eliminado el texto de lat/lng para no mostrar en UI
                                 }
                                 Divider()
                             }
@@ -541,7 +294,6 @@ fun BusinessLocationScreen(
                     }
                 }
 
-                // Estado de búsqueda / error
                 if (isSearching) {
                     Spacer(Modifier.height(8.dp))
                     AssistChip(onClick = {}, label = { Text("Buscando…") })
@@ -554,7 +306,7 @@ fun BusinessLocationScreen(
     }
 }
 
-/* ================= Helpers de Geocoder ================= */
+/* ================= Helpers ================= */
 
 private suspend fun buscarDireccion(
     context: Context,
