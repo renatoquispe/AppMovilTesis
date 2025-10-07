@@ -12,35 +12,54 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SupportAgent
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.tesis.appmovil.ui.components.BottomNavBar
+import com.tesis.appmovil.viewmodel.AuthViewModel
 
 @Composable
 fun AccountScreen(
-    navController: NavController? = null, // 👈 agregado para que puedas pasar el nav
-    negocioId: Int = 0,                   // 👈 agregado con valor por defecto
+    navController: NavController,
+    authVM: AuthViewModel = viewModel(),
+    negocioId: Int = 0,
     userName: String = "Nombres y Apellidos",
     onProfileClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onFaqClick: () -> Unit = {},
     onSupportClick: () -> Unit = {},
-    onLogoutClick: () -> Unit = {}
+    // Si el caller pasa esta lambda, la ejecutamos. Si es null, hacemos el logout/navegación por defecto aquí.
+    onLogoutClick: (() -> Unit)? = null
 ) {
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    // Función que realiza el logout y navega a Home (comportamiento por defecto)
+    fun performLogoutAndGoHome() {
+        try {
+            authVM.logout() // asegúrate que tu AuthViewModel tenga este método (o cámbialo)
+        } catch (e: Exception) {
+            // Opcional: manejar excepción
+        }
+
+        navController.navigate("home") {
+            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
+
     Scaffold(
         bottomBar = {
-            if (navController != null) {
-                BottomNavBar(
-                    navController = navController,
-                    negocioId = negocioId,
-                    selected = "cuenta" // 👈 marcamos cuenta como activo
-                )
-            }
+            BottomNavBar(
+                navController = navController,
+                negocioId = negocioId,
+                selected = "cuenta"
+            )
         }
     ) { paddingValues ->
         Column(
@@ -93,12 +112,41 @@ fun AccountScreen(
                 text = "Soporte",
                 onClick = onSupportClick
             )
+
+            // Opción Cerrar sesión (abre diálogo de confirmación)
             AccountOption(
                 icon = Icons.Outlined.ExitToApp,
                 text = "Cerrar sesión",
-                onClick = onLogoutClick
+                onClick = { showLogoutDialog = true }
             )
         }
+    }
+
+    // Dialogo de confirmación para cerrar sesión
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Cerrar sesión") },
+            text = { Text("¿Estás seguro de que quieres cerrar sesión?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    // Si el caller pasó onLogoutClick, lo ejecutamos; si no, hacemos el comportamiento por defecto
+                    if (onLogoutClick != null) {
+                        onLogoutClick()
+                    } else {
+                        performLogoutAndGoHome()
+                    }
+                }) {
+                    Text("Sí")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 
@@ -128,9 +176,18 @@ private fun AccountOption(
         }
     }
 }
+
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun AccountScreenPreview() {
-    AccountScreen(userName = "Juan Pérez")
+    val navController = rememberNavController()
+    AccountScreen(
+        navController = navController,
+        userName = "Juan Pérez",
+        onProfileClick = {},
+        onSettingsClick = {},
+        onFaqClick = {},
+        onSupportClick = {}
+        // no pasamos onLogoutClick, usará el comportamiento por defecto
+    )
 }
-

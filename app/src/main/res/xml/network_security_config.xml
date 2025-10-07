@@ -2,7 +2,7 @@
 <network-security-config>
     <domain-config>
 
-        <domain includeSubdomains="true">evil-crabs-appear.loca.lt</domain>
+        <domain includeSubdomains="true">dry-areas-move.loca.lt</domain>
 
     </domain-config>
 </network-security-config>

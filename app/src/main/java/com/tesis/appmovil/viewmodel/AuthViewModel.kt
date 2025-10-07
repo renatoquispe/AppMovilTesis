@@ -217,5 +217,17 @@ class AuthViewModel : ViewModel() {
             )
         }
     }
+    fun logout() {
+        // Limpia los datos del usuario en el estado
+        _uiState.value = AuthUiState()
+
+        // Si usas Firebase (opcional, si tu login usa Firebase)
+        // FirebaseAuth.getInstance().signOut()
+
+        // Si usas token en Retrofit, puedes limpiarlo también
+        RetrofitClient.setTokenProvider { null }
+
+        println("👋 Sesión cerrada correctamente")
+    }
 
 }

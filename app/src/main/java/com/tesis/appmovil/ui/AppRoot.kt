@@ -586,14 +586,25 @@ fun MainWithBottomBar() {
                 ).joinToString(" ")
 
                 AccountScreen(
-                    navController = innerNav,  // 👈 ahora sí
-                    negocioId = authState.negocioId ?: 0, // 👈 usa el negocio real del usuario logueado
-                    userName = if (fullName.isNotBlank()) fullName else "Nombres y Apellidos",
-                    onProfileClick  = { innerNav.navigate("profile") },
+                    navController = innerNav,                      // tu NavController local (el que ya usas)
+                    negocioId = authState.negocioId ?: 0,          // usa el negocio del authState si existe
+                    userName = fullName,                           // tu variable con nombre completo
+                    onProfileClick = { innerNav.navigate("profile") },
                     onSettingsClick = { innerNav.navigate("ajustes") },
-                    onFaqClick      = { innerNav.navigate("faq") },
-                    onSupportClick  = { innerNav.navigate("support") },
-                    onLogoutClick   = { /* tu lógica de logout */ }
+                    onFaqClick = { innerNav.navigate("faq") },
+                    onSupportClick = { innerNav.navigate("support") },
+
+                    // Lógica de logout personalizada (la llamas desde AppRoot)
+                    onLogoutClick = {
+                        // 1) Cierra sesión en tu ViewModel (asegúrate que el método exista y se llame logout())
+                        authViewModel.logout() // si tu método se llama distinto, cámbialo aquí
+
+                        // 2) Navega a "home" y limpia el back stack para evitar volver atrás
+                        innerNav.navigate("home") {
+                            popUpTo(innerNav.graph.startDestinationId) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
 
