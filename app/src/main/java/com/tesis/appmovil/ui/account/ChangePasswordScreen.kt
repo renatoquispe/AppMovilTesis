@@ -40,6 +40,14 @@ fun ChangePasswordScreen(
     var message by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
 
+    // Función de validación: al menos 8 caracteres, una mayúscula y una minúscula
+    fun isPasswordValid(pw: String): Boolean {
+        if (pw.length < 8) return false
+        if (!pw.any { it.isUpperCase() }) return false
+        if (!pw.any { it.isLowerCase() }) return false
+        return true
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -71,6 +79,14 @@ fun ChangePasswordScreen(
                 onVisibilityChange = { newPasswordVisible = it }
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Mensaje de requisitos debajo del campo (opcional, ayuda al usuario)
+            Text(
+                text = "Requisitos: mínimo 8 caracteres, al menos 1 mayúscula y 1 minúscula",
+                style = MaterialTheme.typography.bodySmall
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             PasswordTextField(
@@ -100,8 +116,8 @@ fun ChangePasswordScreen(
                             message = "Ingresa una nueva contraseña"
                             isError = true
                         }
-                        newPassword.length < 6 -> {
-                            message = "La contraseña debe tener al menos 6 caracteres"
+                        !isPasswordValid(newPassword) -> {
+                            message = "La contraseña debe tener al menos 8 caracteres y contener mayúscula y minúscula"
                             isError = true
                         }
                         newPassword != confirmPassword -> {

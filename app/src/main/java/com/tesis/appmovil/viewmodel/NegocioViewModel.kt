@@ -19,13 +19,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Modelos temporales para horarios y servicios (si los necesitas después)
-//data class HorarioTemporal(
-//    val diaSemana: String,
-//    val horaApertura: String,
-//    val horaCierre: String
-//)
-// Modifica tu data class HorarioTemporal para que coincida con DaySchedule
 data class HorarioTemporal(
     val diaSemana: String,
     val isOpen: Boolean = false,  // ← Agrega esto
@@ -197,13 +190,6 @@ class NegocioViewModel(
                 )
             }
 
-//            _ui.update {
-//                it.copy(
-//                    mutando = false,
-//                    seleccionado = negocioActualizado,
-//                    error = null
-//                )
-//            }
             Result.success(Unit)
         } catch (e: Exception) {
             val errorMsg = e.message ?: "Error al actualizar contacto"
@@ -276,16 +262,6 @@ class NegocioViewModel(
 
     // ========== MÉTODOS PARA TABLAS RELACIONADAS (opcionales, para después) ==========
 
-    /**
-     * PANTALLA 3: Crear horarios (para después)
-     */
-    /**
-     * PANTALLA 3: Crear horarios (IMPLEMENTACIÓN REAL)
-     */
-    /**
-     * PANTALLA 3: Crear horarios (IMPLEMENTACIÓN CORREGIDA)
-     */
-
     suspend fun crearHorarios(idNegocio: Int, horarios: List<DaySchedule>): Result<Unit> {
         return try {
             _ui.update { it.copy(mutando = true, error = null) }
@@ -326,24 +302,6 @@ class NegocioViewModel(
             Result.failure(Exception(errorMsg))
         }
     }
-
-
-//    suspend fun crearHorarios(idNegocio: Int, horarios: List<HorarioTemporal>): Result<Unit> {
-//        return try {
-//            _ui.update { it.copy(mutando = true, error = null) }
-//
-//            // TODO: Implementar llamada al repositorio de horarios
-//            // Por ahora solo simulación
-//            println("📅 Creando ${horarios.size} horarios para negocio $idNegocio")
-//
-//            _ui.update { it.copy(mutando = false, error = null) }
-//            Result.success(Unit)
-//        } catch (e: Exception) {
-//            val errorMsg = e.message ?: "Error al crear horarios"
-//            _ui.update { it.copy(mutando = false, error = errorMsg) }
-//            Result.failure(Exception(errorMsg))
-//        }
-//    }
 
     /**
      * PANTALLA 4: Subir imágenes (para después)

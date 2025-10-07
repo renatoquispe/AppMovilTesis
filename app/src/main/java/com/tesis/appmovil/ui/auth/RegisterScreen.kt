@@ -13,72 +13,57 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.tesis.appmovil.R
 import com.tesis.appmovil.viewmodel.AuthViewModel
 import com.tesis.appmovil.viewmodel.PasswordRecoveryViewModel
 
-
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun RegisterScreen(
     vm: AuthViewModel,
-    recoveryVm: PasswordRecoveryViewModel, // 👈 NUEVO: ViewModel para verificación
+    recoveryVm: PasswordRecoveryViewModel, // 👈 ViewModel para verificación
     onSuccess: (String) -> Unit,
-//    onSuccess: () -> Unit,          // Navega al Login
     onNavigateToLogin: () -> Unit   // Para el botón "Iniciar Sesión"
 ) {
     val state by vm.uiState.collectAsState()
-    val recoveryState by recoveryVm.uiState.collectAsState() // 👈 Estado de verificación
+    val recoveryState by recoveryVm.uiState.collectAsState()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    var codigoSolicitado by remember { mutableStateOf(false) }
-    var ejecuciones by remember { mutableStateOf(0) }
+
     var registroExitoso by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var passwordErrorMessage by remember { mutableStateOf("") }
 
+    // Validación: mínimo 8 caracteres, al menos 1 mayúscula y 1 minúscula
+    fun isPasswordValid(pw: String): Boolean {
+        if (pw.length < 8) return false
+        if (!pw.any { it.isUpperCase() }) return false
+        if (!pw.any { it.isLowerCase() }) return false
+        return true
+    }
 
-    // Al entrar, resetea estados de éxito/error
-    // Resetear estados al entrar
-    // Resetear estados al entrar
     LaunchedEffect(Unit) {
-        println("🔄 RegisterScreen: Inicializando - Resetear estados")
         vm.clearTransient()
         recoveryVm.resetearFlujo()
         registroExitoso = false
     }
+
     LaunchedEffect(state.user) {
         if (state.user != null && !registroExitoso) {
-            println("✅ Registro exitoso, navegando a verificación...")
             registroExitoso = true
             onSuccess(state.email)
         }
     }
-    // ✅ EFECTO CON PROTECCIÓN MEJORADA
-//    LaunchedEffect(state.user) {
-//        if (state.user != null && !registroExitoso) {
-//            println("✅ Registro exitoso, solicitando código de verificación...")
-//            registroExitoso = true
-//            recoveryVm.solicitarCodigoVerificacion(state.email)
-//        }
-//    }
-    // ✅ CUANDO EL CÓDIGO SE ENVÍA EXITOSAMENTE
+
     LaunchedEffect(recoveryState.pasoActual) {
-        println("🔍 LaunchedEffect recoveryState.pasoActual: ${recoveryState.pasoActual}")
         if (recoveryState.pasoActual == 2 && recoveryState.successMessage != null) {
-            println("📍 NAVEGANDO A VERIFY CODE")
             onSuccess(state.email)
         }
     }
-//    LaunchedEffect(Unit) {
-//        vm.clearTransient()
-//        recoveryVm.resetearFlujo() // 👈 Resetear estado de verificación
-//        codigoSolicitado = false // 👈 Resetear el flag también
-//
-//    }
 
-
-    // 👇 EFECTO PARA MOSTRAR ERRORES
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             Toast.makeText(context, error, Toast.LENGTH_LONG).show()
@@ -89,6 +74,7 @@ fun RegisterScreen(
             Toast.makeText(context, "Error en verificación: $error", Toast.LENGTH_LONG).show()
         }
     }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -151,15 +137,23 @@ fun RegisterScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // Password
+        // Password con validación en tiempo real
         OutlinedTextField(
             value = state.password,
-            onValueChange = vm::onPasswordChange,
+            onValueChange = {
+                vm.onPasswordChange(it)
+                passwordErrorMessage = if (!isPasswordValid(it)) {
+                    "La contraseña debe tener mínimo 8 caracteres y contener mayúscula y minúscula"
+                } else {
+                    ""
+                }
+            },
             placeholder = { Text("*******") },
             label = { Text("Contraseña") },
             singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
+
             shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor    = MaterialTheme.colorScheme.primary,
@@ -168,32 +162,40 @@ fun RegisterScreen(
                 focusedLabelColor     = MaterialTheme.colorScheme.primary
             )
         )
-        // 👇 NUEVO: Mostrar errores de ambos ViewModels
+
+        if (passwordErrorMessage.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(passwordErrorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        } else {
+            Spacer(Modifier.height(8.dp))
+            Text("Requisitos: mínimo 8 caracteres, 1 mayúscula y 1 minúscula", style = MaterialTheme.typography.bodySmall)
+        }
+
+        // Mostrar errores del state (si los hay)
         state.error?.let { errorMsg ->
             Spacer(Modifier.height(8.dp))
             Text(errorMsg, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
         }
 
-        state.error?.let { errorMsg ->
-            Spacer(Modifier.height(8.dp))
-            Text(errorMsg, color = MaterialTheme.colorScheme.error)
-        }
-
         Spacer(Modifier.height(18.dp))
 
-        // Botón Registrar
+        // Botón Registrar: solo habilitado si la contraseña cumple la regla
         Button(
             onClick = {
-                focusManager.clearFocus()  // cierra teclado
+                focusManager.clearFocus()
                 keyboard?.hide()
+                // Validar antes de hacer register
+                if (!isPasswordValid(state.password)) {
+                    Toast.makeText(context, "La contraseña no cumple los requisitos", Toast.LENGTH_LONG).show()
+                    return@Button
+                }
                 vm.register(
                     nombre   = state.name,
                     email    = state.email,
                     password = state.password
                 )
             },
-            enabled = !state.isLoading && !recoveryState.isLoading, // 👈 Considerar ambos loadings
-//            enabled = !state.isLoading,
+            enabled = !state.isLoading && !recoveryState.isLoading && isPasswordValid(state.password),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -210,7 +212,5 @@ fun RegisterScreen(
                 Text("REGISTRARSE")
             }
         }
-
-
     }
 }
