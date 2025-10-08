@@ -71,6 +71,13 @@ fun BusinessLocationScreen(
     val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val ui by negocioViewModel.ui.collectAsState()
 
+    LaunchedEffect(searchError) {
+        searchError?.let { error ->
+            println("❌ Error en BusinessLocationScreen: $error")
+        }
+    }
+
+
     if (showInstructions) {
         Dialog(onDismissRequest = { showInstructions = false }) {
             Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
@@ -210,7 +217,11 @@ fun BusinessLocationScreen(
                                         query = query,
                                         onStart = { isSearching = true },
                                         onFinish = { isSearching = false },
-                                        onError = { msg -> searchError = msg },
+                                        onError = { msg ->
+                                            searchError = msg
+                                            // Solo logcat - no se muestra en UI
+                                            println("❌ Error en búsqueda: $msg")
+                                        },
                                         onResults = { list ->
                                             results = list
                                             if (list.isNotEmpty()) {
@@ -286,7 +297,6 @@ fun BusinessLocationScreen(
                                         .padding(12.dp)
                                 ) {
                                     Text(line, style = MaterialTheme.typography.bodyMedium)
-                                    // ⬇️ Eliminado el texto de lat/lng para no mostrar en UI
                                 }
                                 Divider()
                             }
@@ -297,9 +307,6 @@ fun BusinessLocationScreen(
                 if (isSearching) {
                     Spacer(Modifier.height(8.dp))
                     AssistChip(onClick = {}, label = { Text("Buscando…") })
-                } else if (searchError != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(searchError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
                 }
             }
         }

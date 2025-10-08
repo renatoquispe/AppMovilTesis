@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.tesis.appmovil.viewmodel.NegocioViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
@@ -55,7 +56,11 @@ fun BusinessDocumentsScreen(
             }
         }
     )
-
+    LaunchedEffect(permissionState.status) {
+        if (!permissionState.status.isGranted && !permissionState.status.shouldShowRationale) {
+            println("⚠️ Permiso de almacenamiento no concedido")
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()

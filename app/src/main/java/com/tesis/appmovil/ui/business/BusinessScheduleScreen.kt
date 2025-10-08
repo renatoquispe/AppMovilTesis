@@ -52,6 +52,19 @@ fun BusinessScheduleScreen(
     val coroutineScope = rememberCoroutineScope()
     var selectedDay by remember { mutableStateOf<DaySchedule?>(null) }
 
+    LaunchedEffect(negocioState.error) {
+        negocioState.error?.let { error ->
+            println("❌ Error en BusinessScheduleScreen: $error")
+        }
+    }
+
+    LaunchedEffect(idNegocio) {
+        if (idNegocio == null) {
+            println("⚠️ Error: No se encontró el ID del negocio en BusinessScheduleScreen")
+        } else {
+            println("✅ Negocio ID encontrado: $idNegocio")
+        }
+    }
     Scaffold(
         modifier = Modifier.imePadding()
     ) { innerPadding ->
@@ -115,15 +128,7 @@ fun BusinessScheduleScreen(
                 }
             }
 
-            // Mostrar ID del negocio (debug)
-            if (idNegocio != null) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Creando horarios para negocio ID: $idNegocio",
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
+
 
             Spacer(Modifier.height(24.dp))
 
@@ -166,24 +171,6 @@ fun BusinessScheduleScreen(
                 }
             }
 
-            // Mostrar errores
-            if (negocioState.error != null) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Error: ${negocioState.error}",
-                    color = Color.Red,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            if (idNegocio == null) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Error: No se encontró el ID del negocio. Vuelve a la pantalla anterior.",
-                    color = Color.Red,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
         }
 
         // BottomSheet para editar horario (tu código existente)

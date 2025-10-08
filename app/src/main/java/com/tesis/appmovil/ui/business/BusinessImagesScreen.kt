@@ -44,7 +44,7 @@ import com.tesis.appmovil.viewmodel.NegocioViewModel
 @Composable
 fun BusinessImagesScreen(
     negocioViewModel: NegocioViewModel, // ← Agregar este parámetro
-    negocioImagenViewModel: NegocioImagenViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), // 👈 aquí lo inyectas
+    negocioImagenViewModel: NegocioImagenViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
 
     onContinue: () -> Unit,
     onBack: () -> Unit
@@ -120,7 +120,6 @@ fun BusinessImagesScreen(
                 .height(120.dp)
                 .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
                 .clickable {
-                    // Abre el selector del sistema (Photo Picker moderno)
                     galleryLauncher.launch("image/*")
                 },
             contentAlignment = Alignment.Center
@@ -332,19 +331,6 @@ fun BusinessImagesScreen(
         ) {
             Text("CONTINUAR →")
         }
-
-
-//        Button(
-//            onClick = { onContinue() },
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .height(56.dp),
-//            shape = CircleShape,
-//            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5C1349)),
-//            enabled = selectedImages.size >= 2 // Habilitar solo si hay al menos 2 imágenes
-//        ) {
-//            Text("CONTINUAR →")
-//        }
     }
 }
 
@@ -381,7 +367,6 @@ fun RequirementItem(checked: Boolean, text: String) {
 
         Spacer(Modifier.width(12.dp))
 
-        // Texto con color fijo (negro) como en Figma
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,

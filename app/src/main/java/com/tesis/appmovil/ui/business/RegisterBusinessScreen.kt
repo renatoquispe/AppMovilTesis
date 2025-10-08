@@ -326,14 +326,14 @@ fun RegisterBusinessScreen(
         val isLoading = negocioState.mutando || categoriaState.isLoading || ubicacionState.isLoading
 
         // Mostrar ID del usuario (para debugging)
-        if (idUsuario != null) {
-            Text(
-                text = "Usuario ID: $idUsuario",
-                color = Color.Gray,
-                style = MaterialTheme.typography.bodySmall
-            )
-            Spacer(Modifier.height(8.dp))
-        }
+//        if (idUsuario != null) {
+//            Text(
+//                text = "Usuario ID: $idUsuario",
+//                color = Color.Gray,
+//                style = MaterialTheme.typography.bodySmall
+//            )
+//            Spacer(Modifier.height(8.dp))
+//        }
 
         Button(
             onClick = {
@@ -388,40 +388,64 @@ fun RegisterBusinessScreen(
         }
 
         // Mostrar errores si los hay
-        if (categoriaState.error != null) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Error al cargar categorías: ${categoriaState.error}",
-                color = Color.Red,
-                style = MaterialTheme.typography.bodySmall
-            )
+        // Solo dejar logs en consola:
+        LaunchedEffect(categoriaState.error) {
+            categoriaState.error?.let { error ->
+                println("❌ Error al cargar categorías: $error")
+            }
         }
 
-        if (ubicacionState.error != null) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Error al cargar ubicaciones: ${ubicacionState.error}",
-                color = Color.Red,
-                style = MaterialTheme.typography.bodySmall
-            )
+        LaunchedEffect(ubicacionState.error) {
+            ubicacionState.error?.let { error ->
+                println("❌ Error al cargar ubicaciones: $error")
+            }
         }
 
-        if (negocioState.error != null) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Error al crear negocio: ${negocioState.error}",
-                color = Color.Red,
-                style = MaterialTheme.typography.bodySmall
-            )
+        LaunchedEffect(negocioState.error) {
+            negocioState.error?.let { error ->
+                println("❌ Error en NegocioViewModel: $error")
+            }
         }
 
-        if (idUsuario == null) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Error: No se pudo obtener el ID del usuario. Vuelve a iniciar sesión.",
-                color = Color.Red,
-                style = MaterialTheme.typography.bodySmall
-            )
+        LaunchedEffect(idUsuario) {
+            if (idUsuario == null) {
+                println("⚠️ Error: No se pudo obtener el ID del usuario")
+            }
         }
+//        if (categoriaState.error != null) {
+//            Spacer(Modifier.height(8.dp))
+//            Text(
+//                text = "Error al cargar categorías: ${categoriaState.error}",
+//                color = Color.Red,
+//                style = MaterialTheme.typography.bodySmall
+//            )
+//        }
+//
+//        if (ubicacionState.error != null) {
+//            Spacer(Modifier.height(8.dp))
+//            Text(
+//                text = "Error al cargar ubicaciones: ${ubicacionState.error}",
+//                color = Color.Red,
+//                style = MaterialTheme.typography.bodySmall
+//            )
+//        }
+//
+//        if (negocioState.error != null) {
+//            Spacer(Modifier.height(8.dp))
+//            Text(
+//                text = "Error al crear negocio: ${negocioState.error}",
+//                color = Color.Red,
+//                style = MaterialTheme.typography.bodySmall
+//            )
+//        }
+//
+//        if (idUsuario == null) {
+//            Spacer(Modifier.height(8.dp))
+//            Text(
+//                text = "Error: No se pudo obtener el ID del usuario. Vuelve a iniciar sesión.",
+//                color = Color.Red,
+//                style = MaterialTheme.typography.bodySmall
+//            )
+//        }
     }
 }

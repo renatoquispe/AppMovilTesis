@@ -85,12 +85,3 @@ data class HorarioDto(
         return "${getHoraFormateada(horaApertura)} - ${getHoraFormateada(horaCierre)}"
     }
 }
-//data class HorarioDto(
-//    val idHorario: Int? = null,
-//    val diaSemana: String,
-//    val horaApertura: String, // ✅ SIN SerializedName
-//    val horaCierre: String,    // ✅ SIN SerializedName
-////    @SerializedName("hora_apertura") val horaApertura: String,
-////    @SerializedName("hora_cierre") val horaCierre: String,
-//    val estado: Int
-//)

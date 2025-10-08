@@ -41,6 +41,11 @@ fun BusinessReadyScreen(
     val context = LocalContext.current
     val isMutando by remember { derivedStateOf { uiState.value.mutando } }
 
+    LaunchedEffect(uiState.value.error) {
+        uiState.value.error?.let { error ->
+            println("❌ Error en BusinessReadyScreen: $error")
+        }
+    }
     // Observar si el registro se completó exitosamente
     LaunchedEffect(uiState.value.registroCompletado) {
         if (uiState.value.registroCompletado) {
@@ -136,27 +141,6 @@ fun BusinessReadyScreen(
                 )
             }
         }
-        // Mostrar error si existe
-        uiState.value.error?.let { error ->
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center
-            )
-        }
-//        Button(
-//            onClick = onPublish,
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .height(56.dp),
-//            shape = RoundedCornerShape(28.dp)
-//        ) {
-//            Text(
-//                "PUBLICAR NEGOCIO",
-//                fontSize = 16.sp,
-//                fontWeight = FontWeight.Bold
-//            )
-//        }
+
     }
 }
