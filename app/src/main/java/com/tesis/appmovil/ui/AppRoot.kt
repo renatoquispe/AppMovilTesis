@@ -396,7 +396,9 @@ fun MainWithBottomBar() {
             }
 
             // CHATBOT (ruta pública)
-            composable("chatbot") { ChatBotScreen() }
+            composable("chatbot") {
+                ChatBotScreen(navController = innerNav)   // pasamos aquí el nav
+            }
 
             // SUBNAVEGACIÓN DEL REGISTRO DE NEGOCIO
             navigation(
