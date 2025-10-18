@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -123,22 +124,26 @@ fun BusinessProfileScreen(
                 BusinessProfile(
                     negocio         = negocioModel,
                     headerImageUrl  = headerImageUrl,
-                    onSave          = { updated ->
+                    onSave = { updated ->
+                        // actualizar usando el mismo ViewModel
                         vm.actualizarNegocio(
                             negocioId,
                             NegocioUpdate(
                                 idCategoria    = updated.id_categoria,
                                 idUbicacion    = updated.id_ubicacion,
-                                nombre          = updated.nombre,
-                                descripcion     = updated.descripcion,
-                                direccion       = updated.direccion,
-                                latitud         = updated.latitud,
-                                longitud        = updated.longitud,
-                                telefono        = updated.telefono,
-                                correoContacto  = updated.correo_contacto,
+                                nombre         = updated.nombre,
+                                descripcion    = updated.descripcion,
+                                direccion      = updated.direccion,
+                                latitud        = updated.latitud,
+                                longitud       = updated.longitud,
+                                telefono       = updated.telefono,
+                                correoContacto = updated.correo_contacto,
                                 estadoAuditoria= null
                             )
                         )
+                        // pedir la recarga inmediata del detalle (hará que ui.detalle se actualice)
+                        // no uses GlobalScope ni crear un nuevo ViewModel
+                        vm.obtenerNegocio(negocioId)
                     },
                     onHorarioClick  = { navController?.navigate("horarios/$negocioId") },
                     onChangeImage   = { picker.launch("image/*") },
@@ -176,6 +181,7 @@ fun BusinessProfile(
                 text    = { Text("Guardar") },
                 icon    = { Icon(Icons.Outlined.Check, contentDescription = null) },
                 onClick = {
+                    // Guardar cambios
                     onSave(
                         negocio.copy(
                             nombre          = nombre.text,
@@ -185,6 +191,17 @@ fun BusinessProfile(
                             correo_contacto = correo.text.ifBlank { null }
                         )
                     )
+
+                    // 🔄 Forzar refresco antes de volver
+                    kotlinx.coroutines.GlobalScope.launch {
+                        // Esperar un breve tiempo para que el servidor confirme
+                        kotlinx.coroutines.delay(800)
+                        // Recargar el negocio actualizado
+                        com.tesis.appmovil.viewmodel.NegocioViewModel().obtenerNegocio(negocio.id_negocio)
+                    }
+
+                    // 👇 Regresar a la vista del perfil del negocio
+                    navToNegocio()
                 },
                 expanded       = true,
                 shape          = RoundedCornerShape(16.dp),
@@ -194,6 +211,7 @@ fun BusinessProfile(
             )
         },
         floatingActionButtonPosition = FabPosition.End
+
     ) { insets ->
         Column(
             Modifier
@@ -208,7 +226,7 @@ fun BusinessProfile(
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
             )
             Text(
-                negocio.nombre,
+                nombre.text.ifBlank { negocio.nombre },
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -257,8 +275,13 @@ fun BusinessProfile(
             OutlinedTextField(
                 value = telefono,
                 onValueChange = { newValue ->
+                    // Filtrar solo números, manteniendo posición del cursor
                     val digitsOnly = newValue.text.filter { it.isDigit() }.take(9)
-                    telefono = TextFieldValue(digitsOnly)
+                    val newCursor = newValue.selection.end.coerceAtMost(digitsOnly.length)
+                    telefono = newValue.copy(
+                        text = digitsOnly,
+                        selection = TextRange(newCursor)
+                    )
                 },
                 label = { Text("Teléfono de contacto") },
                 singleLine = true,
