@@ -92,7 +92,7 @@ fun BusinessContactInfoScreen(
                 onValueChange = { nuevo ->
                     telefono = nuevo.filter(Char::isDigit).take(PHONE_LEN)
                 },
-                label = { Text("Celular") },
+                label = { Text("WhatsApp/Celular") },
                 placeholder = { Text("9XXXXXXXX") },
                 singleLine = true,
                 isError = telefono.isNotEmpty() && !telValido,
