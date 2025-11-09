@@ -57,7 +57,8 @@ class SearchViewModel(
         viewModelScope.launch {
             state = state.copy(isLoading = true, error = null)
             try {
-                val negocios = negocioRepo.listar() // trae todos o "populares" desde backend
+                val negocios = negocioRepo.listar()
+                    .filter { it.estado_auditoria == 1 } // ✅ solo los habilitados
                 val items = fetchServiceItemsWithImages(negocios)
                 state = state.copy(popular = items, isLoading = false)
             } catch (t: Throwable) {
@@ -71,6 +72,7 @@ class SearchViewModel(
             state = state.copy(isLoading = true, error = null)
             try {
                 val negocios = negocioRepo.listar(q = q)
+                    .filter { it.estado_auditoria == 1 } // ✅ igual aquí
                 val items = fetchServiceItemsWithImages(negocios)
                 state = state.copy(popular = items, isLoading = false)
             } catch (t: Throwable) {
@@ -78,6 +80,7 @@ class SearchViewModel(
             }
         }
     }
+
 
     /**
      * Por cada Negocio hace una llamada a obtenerDetalle (concurrente) y extrae la primera imagen

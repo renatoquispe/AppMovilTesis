@@ -27,7 +27,8 @@ class BuscarPopularViewModel(
         _state.value = _state.value.copy(isLoading = true, error = null)
         viewModelScope.launch {
             try {
-                val lista = repo.listar()              // trae todos
+                val lista = repo.listar()
+                    .filter { it.estado_auditoria == 1 } // ✅ solo negocios habilitados
                 val uno = if (lista.isNotEmpty()) listOf(lista.first()) else emptyList()
                 _state.value = PopularState(isLoading = false, negocios = uno)
             } catch (e: Exception) {
