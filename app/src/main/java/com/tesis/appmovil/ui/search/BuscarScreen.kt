@@ -1,6 +1,9 @@
 package com.tesis.appmovil.ui.search
 
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -11,10 +14,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.tesis.appmovil.viewmodel.HomeNegocioViewModel
 import com.tesis.appmovil.viewmodel.ServicioViewModel
 
@@ -214,6 +219,46 @@ fun BuscarScreen(
         }
     }
 }
+@Composable
+fun MarqueeText(
+    text: String,
+    modifier: Modifier = Modifier,
+    speed: Int = 40 // menor = más rápido
+) {
+    val scrollState = rememberScrollState()
+    var textWidth by remember { mutableStateOf(0) }
+    var containerWidth by remember { mutableStateOf(0) }
+
+    // Movimiento continuo
+    LaunchedEffect(textWidth, containerWidth) {
+        if (textWidth > containerWidth && textWidth > 0) {
+            while (true) {
+                val distance = textWidth - containerWidth
+                scrollState.animateScrollTo(distance, animationSpec = tween(durationMillis = distance * speed))
+                scrollState.animateScrollTo(0, animationSpec = tween(durationMillis = distance * speed))
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .horizontalScroll(scrollState, enabled = false)
+            .onGloballyPositioned { coordinates ->
+                containerWidth = coordinates.size.width
+            }
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .onGloballyPositioned { coordinates ->
+                    textWidth = coordinates.size.width
+                },
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -236,14 +281,20 @@ private fun SearchBarOverlay(
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Outlined.Menu, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
+            //Icon(Icons.Outlined.Menu, contentDescription = null)
+            //Spacer(Modifier.width(8.dp))
             TextField(
                 value = text,
                 onValueChange = onTextChange,
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Busque por negocio, servicio o distrito") },
+                placeholder = {
+                    MarqueeText(
+                        text = "Busque por negocio o distrito",
+                        speed = 35
+                    )
+                },
                 singleLine = true,
+                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 colors = TextFieldDefaults.textFieldColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     unfocusedIndicatorColor = MaterialTheme.colorScheme.surface,
@@ -252,6 +303,7 @@ private fun SearchBarOverlay(
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() })
             )
+
             IconButton(onClick = onSearch) {
                 Icon(Icons.Outlined.Search, contentDescription = "Buscar")
             }
