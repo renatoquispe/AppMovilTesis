@@ -60,57 +60,6 @@ private val LightColorScheme = lightColorScheme(
     onError = Color.White
 )
 
-
-//private val DarkColorScheme = darkColorScheme(
-//
-//
-//    primary = Purple300,            // Color principal para el modo oscuro (más claro)
-//    onPrimary = Purple900,          // Texto/iconos sobre el color primario
-//    primaryContainer = Purple800,   // Contenedor relacionado al primario
-//    onPrimaryContainer = Purple100,
-//
-//    secondary = Blue700,          // Color secundario o de acento
-//    onSecondary = Blue900,        // Texto/iconos sobre el secundario
-//    secondaryContainer = Blue800,
-//    onSecondaryContainer = Blue100,
-//
-//    tertiary = Yellow300,           // Color terciario o de acento extra
-//
-//    background = Grey900,           // Color de fondo de la app
-//    onBackground = Grey100,         // Color del texto sobre el fondo
-//
-//    surface = Grey800,              // Color de superficies (cards, menús)
-//    onSurface = Grey200,            // Color del texto sobre superficies
-//
-//    error = Red400,                 // Color para errores
-//    onError = Color.White           // Texto sobre color de error
-//)
-
-//private val LightColorScheme = lightColorScheme(
-//
-//    primary = Purple700,              // Color principal para el modo claro (más oscuro)
-//    onPrimary = Color.White,        // Texto/iconos sobre el color primario
-//    primaryContainer = Purple100,
-//    onPrimaryContainer = Purple900,
-//
-//    secondary = Blue500,
-//    onSecondary = Color.White,
-//    secondaryContainer = Blue100,
-//    onSecondaryContainer = Blue900,
-//
-//    tertiary = Yellow500,
-//
-//    background = Grey50,
-//    onBackground = Grey900,
-//
-//    surface = Grey100,
-//    onSurface = Grey900,
-//
-//    error = Red600,
-//    onError = Color.White
-//)
-
-
 @Composable
 fun AppMovilTesisTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
