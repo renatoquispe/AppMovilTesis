@@ -236,22 +236,35 @@ interface ApiService {
 
 
     // ---------- NEGOCIO-IMAGENES ----------
-    @GET("negocio-imagenes")
-    suspend fun getNegocioImagenes(
-        @Query("id_negocio") idNegocio: Int? = null
+//    @GET("negocio-imagenes")
+//    suspend fun getNegocioImagenes(
+//        @Query("id_negocio") idNegocio: Int? = null
+//    ): Response<List<NegocioImagen>>
+    @GET("negocio-imagenes/negocio/{idNegocio}")
+    suspend fun getNegocioImagenesPorNegocio(
+        @Path("idNegocio") idNegocio: Int
     ): Response<List<NegocioImagen>>
 
-    @GET("negocio-imagenes/{id}")
-    suspend fun getNegocioImagen(@Path("id") id: Int): Response<NegocioImagen>
+
+    @GET("negocio-imagen/{id}")
+    suspend fun getNegocioImagen(@Path("id_negocio") id: Int): Response<NegocioImagen>
 
 
     @POST("negocio-imagenes")
     suspend fun createNegocioImagen(@Body body: NegocioImagenCreate): Response<NegocioImagen>
 
-    @PUT("negocio-imagenes/{id}")
+    @PUT("negocio-imagen/{id}")
     suspend fun updateNegocioImagen(
-        @Path("id") id: Int,
+        @Path("id_negocio") id: Int,
         @Body body: NegocioImagenUpdate
+    ): Response<NegocioImagen>
+
+    @Multipart
+    @PUT("negocio-imagenes/{id}/imagen")
+    suspend fun actualizarImagenNegocio(
+        @Path("id") id: Int,
+        @Part imagen: MultipartBody.Part,
+        @Part("descripcion") descripcion: RequestBody? = null
     ): Response<NegocioImagen>
 
     @DELETE("negocio-imagenes/{id}")

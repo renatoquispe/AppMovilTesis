@@ -33,9 +33,29 @@ class NegocioImagenRepository(
             descripcion = descripcionBody
         ).bodyOrThrow()
     }
+
+    suspend fun reemplazarImagen(
+        context: Context,
+        idImagen: Int,
+        uri: Uri,
+        descripcion: String? = null
+    ): NegocioImagen {
+        val imagenPart = uriToMultipart(context, uri)
+        val descripcionBody = descripcion?.toRequestBody("text/plain".toMediaTypeOrNull())
+
+        return api.actualizarImagenNegocio(
+            id = idImagen,
+            imagen = imagenPart,
+            descripcion = descripcionBody
+        ).bodyOrThrow()
+    }
+
     /** Lista imágenes; opcionalmente filtra por id_negocio */
-    suspend fun listar(idNegocio: Int? = null): List<NegocioImagen> =
-        api.getNegocioImagenes(idNegocio).bodyOrThrow()
+//    suspend fun listar(idNegocio: Int? = null): List<NegocioImagen> =
+//        api.getNegocioImagenes(idNegocio).bodyOrThrow()
+    suspend fun listar(idNegocio: Int): List<NegocioImagen> =
+        api.getNegocioImagenesPorNegocio(idNegocio).bodyOrThrow()
+
 
     /** Obtiene una imagen por id */
     suspend fun obtener(id: Int): NegocioImagen =

@@ -9,6 +9,7 @@ import com.tesis.appmovil.models.NegocioImagen
 import com.tesis.appmovil.repository.NegocioImagenRepository
 import com.tesis.appmovil.data.remote.dto.NegocioImagenCreate
 import com.tesis.appmovil.data.remote.dto.NegocioImagenUpdate
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -29,24 +30,95 @@ class NegocioImagenViewModel(
     private val _ui = MutableStateFlow(NegocioImagenUiState())
     val ui: StateFlow<NegocioImagenUiState> = _ui
 
-    fun subirImagenes(context: Context, negocioId: Int, uris: List<Uri>) {
-        viewModelScope.launch {
+//    fun subirImagenes(context: Context, negocioId: Int, uris: List<Uri>) {
+//        viewModelScope.launch {
+//            _ui.update { it.copy(mutando = true, error = null) }
+//            runCatching {
+//                uris.map { uri -> repo.subirImagen(context, negocioId, uri) }
+//            }
+//                .onSuccess { nuevas ->
+//                    val lista = _ui.value.imagenes.toMutableList().apply { addAll(nuevas) }
+//                    _ui.update { it.copy(mutando = false, imagenes = lista) }
+//                }
+//                .onFailure { e ->
+//                    _ui.update { it.copy(mutando = false, error = e.message ?: "Error al subir imágenes") }
+//                }
+//        }
+//    }
+fun subirImagenes(context: Context, negocioId: Int, uris: List<Uri>): Job {
+    return viewModelScope.launch {
+        _ui.update { it.copy(mutando = true, error = null) }
+        runCatching {
+            uris.map { uri -> repo.subirImagen(context, negocioId, uri) }
+        }
+            .onSuccess { nuevas ->
+                val lista = _ui.value.imagenes.toMutableList().apply { addAll(nuevas) }
+                _ui.update { it.copy(mutando = false, imagenes = lista) }
+            }
+            .onFailure { e ->
+                _ui.update {
+                    it.copy(
+                        mutando = false,
+                        error = e.message ?: "Error al subir imágenes"
+                    )
+                }
+            }
+    }
+}
+
+
+//    fun reemplazarImagen(context: Context, idImagen: Int, uri: Uri, descripcion: String? = null) {
+//        viewModelScope.launch {
+//            _ui.update { it.copy(mutando = true, error = null) }
+//            runCatching {
+//                repo.reemplazarImagen(context, idImagen, uri, descripcion)
+//            }.onSuccess { actualizada ->
+//                val lista = _ui.value.imagenes.map {
+//                    if (it.id_imagen == idImagen) actualizada else it
+//                }
+//                _ui.update { it.copy(mutando = false, imagenes = lista) }
+//            }.onFailure { e ->
+//                _ui.update { it.copy(mutando = false, error = e.message ?: "Error al reemplazar imagen") }
+//            }
+//        }
+//    }
+
+    fun reemplazarImagen(
+        context: Context,
+        idImagen: Int,
+        uri: Uri,
+        descripcion: String? = null
+    ):Job {
+        return viewModelScope.launch {
             _ui.update { it.copy(mutando = true, error = null) }
             runCatching {
-                uris.map { uri -> repo.subirImagen(context, negocioId, uri) }
+                repo.reemplazarImagen(context, idImagen, uri, descripcion)
+            }.onSuccess { actualizada ->
+                // Actualizar la lista localmente en lugar de recargar inmediatamente
+                val lista = _ui.value.imagenes.map {
+                    if (it.id_imagen == idImagen) actualizada else it
+                }
+                _ui.update {
+                    it.copy(
+                        mutando = false,
+                        imagenes = lista,
+                        error = null
+                    )
+                }
+            }.onFailure { e ->
+                _ui.update {
+                    it.copy(
+                        mutando = false,
+                        error = e.message ?: "Error al reemplazar imagen"
+                    )
+                }
             }
-                .onSuccess { nuevas ->
-                    val lista = _ui.value.imagenes.toMutableList().apply { addAll(nuevas) }
-                    _ui.update { it.copy(mutando = false, imagenes = lista) }
-                }
-                .onFailure { e ->
-                    _ui.update { it.copy(mutando = false, error = e.message ?: "Error al subir imágenes") }
-                }
         }
     }
 
+
     /** Listar (opcionalmente por id_negocio) */
-    fun cargarImagenes(idNegocio: Int? = null) {
+    fun cargarImagenes(idNegocio: Int) {
         viewModelScope.launch {
             _ui.update { it.copy(isLoading = true, error = null) }
             runCatching { repo.listar(idNegocio) }

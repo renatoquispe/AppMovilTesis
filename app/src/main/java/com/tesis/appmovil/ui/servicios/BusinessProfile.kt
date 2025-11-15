@@ -1,6 +1,13 @@
 package com.tesis.appmovil.ui.servicios
 
+import android.content.Context
 import android.net.Uri
+import kotlinx.coroutines.joinAll
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.ui.platform.LocalContext
+import com.tesis.appmovil.viewmodel.NegocioImagenViewModel
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.GetContent
 import androidx.compose.foundation.background
@@ -21,7 +28,6 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Store
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -39,23 +45,32 @@ import coil.compose.AsyncImage
 import com.tesis.appmovil.data.remote.dto.NegocioUpdate
 import com.tesis.appmovil.data.remote.request.NegocioResponse
 import com.tesis.appmovil.models.Negocio
+import com.tesis.appmovil.models.NegocioImagen
 import com.tesis.appmovil.ui.components.BottomNavBar
 import com.tesis.appmovil.viewmodel.NegocioViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.*
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BusinessProfileScreen(
     negocioId: Int,
     navController: NavController?,
-    vm: NegocioViewModel = viewModel()
+    vm: NegocioViewModel = viewModel(),
+    imagenVm: NegocioImagenViewModel = viewModel() // 👈 AGREGA ESTE VIEWMODEL
+
 ) {
     val ui by vm.ui.collectAsState()
     val isPreview = LocalInspectionMode.current
+    val imagenUi by imagenVm.ui.collectAsState() // 👈 Estado de las imágenes
     val scope = rememberCoroutineScope()
     val snackHost = remember { SnackbarHostState() }
     var headerImageUrl by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+
 
     val picker = rememberLauncherForActivityResult(GetContent()) { uri: Uri? ->
         uri?.let { headerImageUrl = it.toString() }
@@ -63,6 +78,8 @@ fun BusinessProfileScreen(
 
     LaunchedEffect(negocioId) {
         if (!isPreview) vm.obtenerNegocio(negocioId)
+        imagenVm.cargarImagenes(negocioId) // 👈 Cargar imágenes existentes
+
     }
     LaunchedEffect(ui.error) {
         ui.error?.let {
@@ -119,42 +136,112 @@ fun BusinessProfileScreen(
                     correo_contacto = r.correoContacto,
                     fecha_creacion  = r.fechaCreacion?.let { Date() } ?: Date(),
                     estado_auditoria= r.estadoAuditoria ?: 0,
+                    // 👇 AGREGA ESTA LÍNEA
+                    imagenes = r.imagenes?.map { dto ->
+                        NegocioImagen(
+                            id_imagen = dto.idImagen,
+                            url_imagen = dto.urlImagen,
+                            id_negocio = r.idNegocio,
+                            descripcion = dto.descripcion,
+                            fecha_subida = null, // puedes parsear dto.fechaSubida si quieres
+                            estado = (dto.estado as? Int) ?: 0
+                        )
+                    }
                 )
 
                 BusinessProfile(
                     negocio         = negocioModel,
                     headerImageUrl  = headerImageUrl,
+//                    onSave = { updated ->
+//                        scope.launch {
+//                            // Filtra solo imágenes nuevas: sin id_imagen y con ruta local
+//                            val nuevasUris = updated.imagenes
+//                                ?.filter { it.id_imagen <= 0 || it.id_imagen == null }  // solo las que no tienen id real
+//                                ?.mapNotNull { it.url_imagen?.takeIf { uri -> uri.startsWith("content://") } }
+//                                ?: emptyList()
+//
+//                            if (nuevasUris.isNotEmpty()) {
+//                                imagenVm.subirImagenes(
+//                                    context = context,
+//                                    negocioId = negocioId,
+//                                    uris = nuevasUris.map(Uri::parse)
+//                                )
+//                            }
+//
+//                            // Ahora actualiza el negocio en la BD
+//                            vm.actualizarNegocio(
+//                                negocioId,
+//                                NegocioUpdate(
+//                                    idCategoria = updated.id_categoria,
+//                                    idUbicacion = updated.id_ubicacion,
+//                                    nombre = updated.nombre,
+//                                    descripcion = updated.descripcion,
+//                                    direccion = updated.direccion,
+//                                    latitud = updated.latitud,
+//                                    longitud = updated.longitud,
+//                                    telefono = updated.telefono,
+//                                    correoContacto = updated.correo_contacto,
+//                                    estadoAuditoria = null
+//                                )
+//                            )
+//
+//                            vm.obtenerNegocio(negocioId)
+//                        }
+//                        imagenVm.cargarImagenes(negocioId)
+//                    },
                     onSave = { updated ->
-                        // actualizar usando el mismo ViewModel
-                        vm.actualizarNegocio(
-                            negocioId,
-                            NegocioUpdate(
-                                idCategoria    = updated.id_categoria,
-                                idUbicacion    = updated.id_ubicacion,
-                                nombre         = updated.nombre,
-                                descripcion    = updated.descripcion,
-                                direccion      = updated.direccion,
-                                latitud        = updated.latitud,
-                                longitud       = updated.longitud,
-                                telefono       = updated.telefono,
-                                correoContacto = updated.correo_contacto,
-                                estadoAuditoria= null
+                        scope.launch {
+                            // Filtrar solo las imágenes nuevas
+                            val nuevasUris = updated.imagenes
+                                ?.filter { it.id_imagen <= 0 || it.id_imagen == null }
+                                ?.mapNotNull { it.url_imagen?.takeIf { uri -> uri.startsWith("content://") } }
+                                ?: emptyList()
+
+                            // Esperar a que terminen de subirse
+                            if (nuevasUris.isNotEmpty()) {
+                                val job = imagenVm.subirImagenes(
+                                    context = context,
+                                    negocioId = negocioId,
+                                    uris = nuevasUris.map(Uri::parse)
+                                )
+                                job.join()
+                            }
+
+                            // Luego actualizar el negocio
+                            vm.actualizarNegocio(
+                                negocioId,
+                                NegocioUpdate(
+                                    idCategoria = updated.id_categoria,
+                                    idUbicacion = updated.id_ubicacion,
+                                    nombre = updated.nombre,
+                                    descripcion = updated.descripcion,
+                                    direccion = updated.direccion,
+                                    latitud = updated.latitud,
+                                    longitud = updated.longitud,
+                                    telefono = updated.telefono,
+                                    correoContacto = updated.correo_contacto,
+                                    estadoAuditoria = null
+                                )
                             )
-                        )
-                        // pedir la recarga inmediata del detalle (hará que ui.detalle se actualice)
-                        // no uses GlobalScope ni crear un nuevo ViewModel
-                        vm.obtenerNegocio(negocioId)
+
+                            // Finalmente refrescar
+                            imagenVm.cargarImagenes(negocioId)
+                            vm.obtenerNegocio(negocioId)
+                        }
                     },
                     onHorarioClick  = { navController?.navigate("horarios/$negocioId") },
-                    onChangeImage   = { picker.launch("image/*") },
                     navToServicios  = { navController?.navigate("servicios") },
                     navToNegocio    = { navController?.navigate("businessProfile/$negocioId") },
-                    navToCuenta     = { /* ... */ }
+                    navToCuenta     = { /* ... */ },
+                    imagenVm        = imagenVm,
+                    context         = context
                 )
             }
         }
     }
 }
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -163,55 +250,113 @@ fun BusinessProfile(
     headerImageUrl: String?,
     onSave: (Negocio) -> Unit,
     onHorarioClick: () -> Unit,
-    onChangeImage: () -> Unit,
     navToServicios: () -> Unit,
     navToNegocio: () -> Unit,
-    navToCuenta: () -> Unit
+    navToCuenta: () -> Unit,
+    imagenVm: NegocioImagenViewModel,
+// 👈 agregar
+    context: Context
 ) {
-    var nombre      by remember { mutableStateOf(TextFieldValue(negocio.nombre)) }
-    var telefono    by remember { mutableStateOf(TextFieldValue(negocio.telefono ?: "")) }
-    var correo      by remember { mutableStateOf(TextFieldValue(negocio.correo_contacto ?: "")) }
+    val scope = rememberCoroutineScope()  // ✅ define el scope aquí
+    var nombre by remember { mutableStateOf(TextFieldValue(negocio.nombre)) }
+    var telefono by remember { mutableStateOf(TextFieldValue(negocio.telefono ?: "")) }
+    var correo by remember { mutableStateOf(TextFieldValue(negocio.correo_contacto ?: "")) }
     var descripcion by remember { mutableStateOf(TextFieldValue(negocio.descripcion ?: "")) }
-    var direccion   by remember { mutableStateOf(TextFieldValue(negocio.direccion ?: "")) }
+    var direccion by remember { mutableStateOf(TextFieldValue(negocio.direccion ?: "")) }
+
+
+// Estado mutable para las imágenes
+    val imagenesState = remember { mutableStateOf(negocio.imagenes ?: emptyList()) }
+    val context = LocalContext.current
+
+// Launcher de selección de imagen
+    val imagenVm: NegocioImagenViewModel = viewModel()
+
+    var imagenSeleccionadaIndex by remember { mutableStateOf<Int?>(null) }
+
+    val picker = rememberLauncherForActivityResult(GetContent()) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            imagenSeleccionadaIndex?.let { index ->
+                val imagenActual = imagenesState.value[index]
+
+                if (imagenActual.id_imagen > 0) {
+                    // Imagen existente → reemplazar en Supabase y BD
+//                    imagenVm.reemplazarImagen(
+//                        context = context,
+//                        idImagen = imagenActual.id_imagen,
+//                        uri = selectedUri
+//                    )
+                    val job = imagenVm.reemplazarImagen(
+                        context = context,
+                        idImagen = imagenActual.id_imagen,
+                        uri = selectedUri
+                    )
+                    scope.launch {
+                        job.join() // Espera a que termine la subida
+                    }
+
+                    val nuevaImagen = imagenActual.copy(url_imagen = selectedUri.toString())
+                    val nuevaLista = imagenesState.value.toMutableList()
+                    nuevaLista[index] = nuevaImagen
+                    imagenesState.value = nuevaLista
+                } else {
+                    // Imagen local (aún no subida)
+                    val nuevaImagen = imagenActual.copy(url_imagen = selectedUri.toString())
+                    val nuevaLista = imagenesState.value.toMutableList()
+                    nuevaLista[index] = nuevaImagen
+                    imagenesState.value = nuevaLista
+                }
+            }
+        }
+    }
+
+//    val picker = rememberLauncherForActivityResult(GetContent()) { uri: Uri? ->
+//        uri?.let { selectedUri ->
+//            imagenSeleccionadaIndex?.let { index ->
+//                val nuevaImagen = NegocioImagen(
+//                    id_imagen = Random().nextInt(), // temporal si no hay id real
+//                    url_imagen = selectedUri.toString(),
+//                    id_negocio = negocio.id_negocio,
+//                    descripcion = null,
+//                    fecha_subida = Date(),
+//                    estado = 1
+//                )
+//                val nuevaLista = imagenesState.value.toMutableList()
+//                nuevaLista[index] = nuevaImagen
+//                imagenesState.value = nuevaLista
+//            }
+//        }
+//    }
+
+
 
     Scaffold(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 modifier = Modifier.offset(y = (-56).dp),
-                text    = { Text("Guardar") },
-                icon    = { Icon(Icons.Outlined.Check, contentDescription = null) },
+                text = { Text("Guardar") },
+                icon = { Icon(Icons.Outlined.Check, contentDescription = null) },
                 onClick = {
-                    // Guardar cambios
                     onSave(
                         negocio.copy(
-                            nombre          = nombre.text,
-                            descripcion     = descripcion.text.ifBlank { null },
-                            direccion       = direccion.text.ifBlank { null },
-                            telefono        = telefono.text.ifBlank { null },
-                            correo_contacto = correo.text.ifBlank { null }
+                            nombre = nombre.text,
+                            descripcion = descripcion.text.ifBlank { null },
+                            direccion = direccion.text.ifBlank { null },
+                            telefono = telefono.text.ifBlank { null },
+                            correo_contacto = correo.text.ifBlank { null },
+                            imagenes = imagenesState.value
                         )
                     )
-
-                    // 🔄 Forzar refresco antes de volver
-                    kotlinx.coroutines.GlobalScope.launch {
-                        // Esperar un breve tiempo para que el servidor confirme
-                        kotlinx.coroutines.delay(800)
-                        // Recargar el negocio actualizado
-                        com.tesis.appmovil.viewmodel.NegocioViewModel().obtenerNegocio(negocio.id_negocio)
-                    }
-
-                    // 👇 Regresar a la vista del perfil del negocio
                     navToNegocio()
                 },
-                expanded       = true,
-                shape          = RoundedCornerShape(16.dp),
+                expanded = true,
+                shape = RoundedCornerShape(16.dp),
                 containerColor = MaterialTheme.colorScheme.surface,
-                contentColor   = MaterialTheme.colorScheme.onSurface,
-                elevation      = FloatingActionButtonDefaults.elevation()
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                elevation = FloatingActionButtonDefaults.elevation()
             )
         },
         floatingActionButtonPosition = FabPosition.End
-
     ) { insets ->
         Column(
             Modifier
@@ -225,63 +370,64 @@ fun BusinessProfile(
                 "Perfil del Negocio",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
             )
-            Text(
-                nombre.text.ifBlank { negocio.nombre },
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
 
-            Box {
-                ElevatedCard(
-                    shape    = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                ) {
-                    AsyncImage(
-                        model           = headerImageUrl ?: "https://picsum.photos/900/600",
-                        contentDescription = "Foto del negocio",
-                        contentScale    = ContentScale.Crop,
-                        modifier        = Modifier.fillMaxSize()
-                    )
-                }
-                IconButton(
-                    onClick  = onChangeImage,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(12.dp)
-                        .size(32.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                            CircleShape
+            // LazyRow con todas las imágenes
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(imagenesState.value.size) { index ->
+                    Box {
+                        AsyncImage(
+                            model = imagenesState.value[index].url_imagen,
+                            contentDescription = "Imagen del negocio",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillParentMaxHeight()
+                                .width(180.dp)
+                                .clip(RoundedCornerShape(12.dp))
                         )
-                ) {
-                    Icon(
-                        Icons.Filled.Edit,
-                        contentDescription = "Cambiar foto",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
+                        IconButton(
+                            onClick = {
+                                imagenSeleccionadaIndex = index
+                                picker.launch("image/*")
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(8.dp)
+                                .size(28.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                                    CircleShape
+                                )
+                        ) {
+                            Icon(
+                                Icons.Filled.Edit,
+                                contentDescription = "Editar imagen",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                 }
             }
 
+            // Campos de texto
             OutlinedTextField(
-                value         = nombre,
+                value = nombre,
                 onValueChange = { nombre = it },
-                label         = { Text("Nombre del negocio") },
-                singleLine    = true,
-                modifier      = Modifier.fillMaxWidth()
+                label = { Text("Nombre del negocio") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
                 value = telefono,
-                onValueChange = { newValue ->
-                    // Filtrar solo números, manteniendo posición del cursor
-                    val digitsOnly = newValue.text.filter { it.isDigit() }.take(9)
-                    val newCursor = newValue.selection.end.coerceAtMost(digitsOnly.length)
-                    telefono = newValue.copy(
-                        text = digitsOnly,
-                        selection = TextRange(newCursor)
-                    )
+                onValueChange = {
+                    val digitsOnly = it.text.filter { char -> char.isDigit() }.take(9)
+                    val newCursor = it.selection.end.coerceAtMost(digitsOnly.length)
+                    telefono = it.copy(text = digitsOnly, selection = TextRange(newCursor))
                 },
                 label = { Text("Teléfono de contacto") },
                 singleLine = true,
@@ -290,59 +436,49 @@ fun BusinessProfile(
             )
 
             OutlinedTextField(
-                value         = correo,
+                value = correo,
                 onValueChange = { correo = it },
-                label         = { Text("Correo de contacto") },
-                singleLine    = true,
-                modifier      = Modifier.fillMaxWidth()
+                label = { Text("Correo de contacto") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
-                value         = descripcion,
+                value = descripcion,
                 onValueChange = { descripcion = it },
-                label         = { Text("Descripción del negocio") },
-                modifier      = Modifier
+                label = { Text("Descripción del negocio") },
+                modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 120.dp),
-                minLines      = 4,
-                maxLines      = 6
+                minLines = 4,
+                maxLines = 6
             )
 
             OutlinedTextField(
-                value         = direccion,
+                value = direccion,
                 onValueChange = { direccion = it },
-                label         = { Text("Dirección") },
-                singleLine    = true,
-                modifier      = Modifier.fillMaxWidth()
+                label = { Text("Dirección") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
             ElevatedCard(
-                shape    = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onHorarioClick() }
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().clickable { onHorarioClick() }
             ) {
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment   = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Outlined.Schedule,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        Icon(Icons.Outlined.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(8.dp))
                         Text("Horarios", style = MaterialTheme.typography.titleSmall)
                     }
-                    Icon(
-                        Icons.Outlined.ArrowForwardIos,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Icon(Icons.Outlined.ArrowForwardIos, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -350,6 +486,8 @@ fun BusinessProfile(
         }
     }
 }
+
+
 
 @Composable
 private fun PillItem(
@@ -377,32 +515,3 @@ private fun PillItem(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun BusinessProfilePreview() {
-    val demo = Negocio(
-        id_negocio      = 1,
-        id_categoria    = 1,
-        id_ubicacion    = 1,
-        id_usuario      = 1,
-        nombre          = "Demo Shop",
-        descripcion     = "Descripción demo",
-        direccion       = "Av. Ejemplo 123",
-        latitud         = null,
-        longitud        = null,
-        telefono        = "000000000",
-        correo_contacto = "demo@ejemplo.com",
-        fecha_creacion  = Date(),
-        estado_auditoria= 1
-    )
-    BusinessProfile(
-        negocio         = demo,
-        headerImageUrl  = null,
-        onSave          = {},
-        onHorarioClick  = {},
-        onChangeImage   = {},
-        navToServicios  = {},
-        navToNegocio    = {},
-        navToCuenta     = {}
-    )
-}

@@ -13,7 +13,6 @@ object RetrofitClient {
 
     private const val BASE_URL = "https://backtesis-production.up.railway.app/api/"
 
-
     private var tokenProvider: (() -> String?)? = null
 
     fun setTokenProvider(provider: () -> String?) {

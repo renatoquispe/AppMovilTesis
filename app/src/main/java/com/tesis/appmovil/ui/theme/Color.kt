@@ -36,7 +36,7 @@ val Yellow500 = Color(0xFFFFEB3B)
 val Yellow600 = Color(0xFFFDD835)
 val Yellow700 = Color(0xFFFBC02D)
 val Yellow800 = Color(0xFFF9A825)
-val Yellow900 = Color(0xFFF57F17)
+val Yellow900 = Color(0xFFB48E35)
 
 // Paleta de Rojo
 val Red50 = Color(0xFFFFEBEE)
@@ -73,12 +73,3 @@ val Grey600 = Color(0xFF757575)
 val Grey700 = Color(0xFF616161)
 val Grey800 = Color(0xFF424242)
 val Grey900 = Color(0xFF212121)
-
-
-//val Purple80 = Color(0xFFD0BCFF)
-//val PurpleGrey80 = Color(0xFFCCC2DC)
-//val Pink80 = Color(0xFFEFB8C8)
-//
-//val Purple40 = Color(0xFF6650a4)
-//val PurpleGrey40 = Color(0xFF625b71)
-//val Pink40 = Color(0xFF7D5260)

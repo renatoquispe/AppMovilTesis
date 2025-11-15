@@ -54,12 +54,6 @@ fun BusinessImagesScreen(
 //    val uiState by negocioViewModel.ui.collectAsState()
     val uiState by negocioViewModel.ui.collectAsState()
 
-
-    /*PERMISOS COMENTADOS prueba // Estado para el permiso de lectura de almacenamiento
-     val permissionState = rememberPermissionState(
-         permission = Manifest.permission.READ_EXTERNAL_STORAGE
-     )*/
-
     // Lanzador para seleccionar múltiples imágenes
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),

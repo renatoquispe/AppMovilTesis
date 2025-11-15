@@ -15,51 +15,40 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.Color
-
 private val DarkColorScheme = darkColorScheme(
-//    primary = Blue300,            // Color principal para el modo oscuro (más claro)
-//    onPrimary = Blue900,          // Texto/iconos sobre el color primario
-//    primaryContainer = Blue800,   // Contenedor relacionado al primario
-//    onPrimaryContainer = Blue100, // Texto/iconos sobre el primaryContainer
-
-    primary = Purple300,            // Color principal para el modo oscuro (más claro)
-    onPrimary = Purple900,          // Texto/iconos sobre el color primario
-    primaryContainer = Purple800,   // Contenedor relacionado al primario
+    primary = Purple400,            // Morado claro para modo oscuro
+    onPrimary = Purple900,
+    primaryContainer = Purple800,
     onPrimaryContainer = Purple100,
 
-    secondary = Blue700,          // Color secundario o de acento
-    onSecondary = Blue900,        // Texto/iconos sobre el secundario
+    secondary = Blue500,            // Azul medio
+    onSecondary = Blue900,
     secondaryContainer = Blue800,
     onSecondaryContainer = Blue100,
 
-    tertiary = Yellow300,           // Color terciario o de acento extra
+    tertiary = Yellow800,           // Amarillo de acento
 
-    background = Grey900,           // Color de fondo de la app
-    onBackground = Grey100,         // Color del texto sobre el fondo
+    background = Grey900,
+    onBackground = Grey100,
 
-    surface = Grey800,              // Color de superficies (cards, menús)
-    onSurface = Grey200,            // Color del texto sobre superficies
+    surface = Grey800,
+    onSurface = Grey200,
 
-    error = Red400,                 // Color para errores
-    onError = Color.White           // Texto sobre color de error
+    error = Red400,
+    onError = Color.White
 )
-
 private val LightColorScheme = lightColorScheme(
-//    primary = Blue500,              // Color principal para el modo claro (más oscuro)
-//    onPrimary = Color.White,        // Texto/iconos sobre el color primario
-//    primaryContainer = Blue100,
-//    onPrimaryContainer = Blue900,
-    primary = Purple700,              // Color principal para el modo claro (más oscuro)
-    onPrimary = Color.White,        // Texto/iconos sobre el color primario
+    primary = Purple700,            // Morado oscuro para modo claro
+    onPrimary = Color.White,
     primaryContainer = Purple100,
     onPrimaryContainer = Purple900,
 
-    secondary = Blue500,
+    secondary = Blue700,
     onSecondary = Color.White,
     secondaryContainer = Blue100,
     onSecondaryContainer = Blue900,
 
-    tertiary = Yellow500,
+    tertiary = Yellow900,
 
     background = Grey50,
     onBackground = Grey900,
@@ -70,6 +59,56 @@ private val LightColorScheme = lightColorScheme(
     error = Red600,
     onError = Color.White
 )
+
+
+//private val DarkColorScheme = darkColorScheme(
+//
+//
+//    primary = Purple300,            // Color principal para el modo oscuro (más claro)
+//    onPrimary = Purple900,          // Texto/iconos sobre el color primario
+//    primaryContainer = Purple800,   // Contenedor relacionado al primario
+//    onPrimaryContainer = Purple100,
+//
+//    secondary = Blue700,          // Color secundario o de acento
+//    onSecondary = Blue900,        // Texto/iconos sobre el secundario
+//    secondaryContainer = Blue800,
+//    onSecondaryContainer = Blue100,
+//
+//    tertiary = Yellow300,           // Color terciario o de acento extra
+//
+//    background = Grey900,           // Color de fondo de la app
+//    onBackground = Grey100,         // Color del texto sobre el fondo
+//
+//    surface = Grey800,              // Color de superficies (cards, menús)
+//    onSurface = Grey200,            // Color del texto sobre superficies
+//
+//    error = Red400,                 // Color para errores
+//    onError = Color.White           // Texto sobre color de error
+//)
+
+//private val LightColorScheme = lightColorScheme(
+//
+//    primary = Purple700,              // Color principal para el modo claro (más oscuro)
+//    onPrimary = Color.White,        // Texto/iconos sobre el color primario
+//    primaryContainer = Purple100,
+//    onPrimaryContainer = Purple900,
+//
+//    secondary = Blue500,
+//    onSecondary = Color.White,
+//    secondaryContainer = Blue100,
+//    onSecondaryContainer = Blue900,
+//
+//    tertiary = Yellow500,
+//
+//    background = Grey50,
+//    onBackground = Grey900,
+//
+//    surface = Grey100,
+//    onSurface = Grey900,
+//
+//    error = Red600,
+//    onError = Color.White
+//)
 
 
 @Composable

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -166,12 +167,13 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                     }
                     item { SectionTitle("Ofertas especiales") }
                     item {
-                        // 👇 CAMBIA state.servicios por state.ofertas
                         if (state.ofertas.isNotEmpty()) {
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(state.ofertas, key = { it.idServicio }) { servicio ->
+
+                                itemsIndexed(state.ofertas.take(5), key = { _, servicio -> servicio.idServicio }) { index, servicio ->
                                     SmallServiceCard(
                                         servicio = servicio,
+                                        index = index, // 👈 se pasa el índice
                                         onClick = {
                                             val idDestino = (servicio.idNegocio.takeIf { id -> id > 0 }
                                                 ?: servicio.negocio.idNegocio)
@@ -181,6 +183,19 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                                         }
                                     )
                                 }
+
+//                                items(state.ofertas.take(5), key = { it.idServicio }) { servicio ->
+//                                    SmallServiceCard(
+//                                        servicio = servicio,
+//                                        onClick = {
+//                                            val idDestino = (servicio.idNegocio.takeIf { id -> id > 0 }
+//                                                ?: servicio.negocio.idNegocio)
+//                                            if (idDestino > 0) {
+//                                                navController?.navigate("businessDetail/$idDestino")
+//                                            }
+//                                        }
+//                                    )
+//                                }
                             }
                         } else {
                             // Mensaje cuando no hay ofertas
@@ -342,9 +357,18 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun SmallServiceCard(servicio: Servicio, onClick: () -> Unit = {}) {
-    val purple = MaterialTheme.colorScheme.primary
+//private fun SmallServiceCard(servicio: Servicio, onClick: () -> Unit = {}) {
+private fun SmallServiceCard(servicio: Servicio, index: Int = 0, onClick: () -> Unit = {}) {
+    val colors = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.secondary,
+        MaterialTheme.colorScheme.tertiary,
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.secondary
+    )
+    val purple = colors[index % colors.size]
     val onPurple = MaterialTheme.colorScheme.onPrimary
+
     val cardWidth = 360.dp
     val cardHeight = 160.dp
     val descuentoPorcentaje = servicio.getDescuentoPorcentaje()
@@ -357,9 +381,11 @@ private fun SmallServiceCard(servicio: Servicio, onClick: () -> Unit = {}) {
             .clickable(onClick = onClick)
     ) {
         Row(Modifier.fillMaxSize()) {
+            // Lado izquierdo: texto
             Column(
                 modifier = Modifier
-                    .weight(1f)
+//                    .weight(1f)
+                    .weight(0.5f) // 60% del ancho total para la columna de texto
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
                     .background(purple)
@@ -386,7 +412,9 @@ private fun SmallServiceCard(servicio: Servicio, onClick: () -> Unit = {}) {
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         ),
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis // <- agrega esto
+
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.Top) {
@@ -419,29 +447,43 @@ private fun SmallServiceCard(servicio: Servicio, onClick: () -> Unit = {}) {
                     )
                 }
             }
+
+            // Lado derecho: imagen + botón encima
             Box(
                 modifier = Modifier
-                    .width(160.dp)
-                    .fillMaxHeight(),
-                contentAlignment = Alignment.Center
+                    .weight(0.5f) // 40% del ancho total para la imagen
+//                    .width(190.dp)
+                    .fillMaxHeight()
+                    .background(purple), // fondo del card
+                contentAlignment = Alignment.BottomEnd
             ) {
+                // Imagen con lado izquierdo circular
                 AsyncImage(
                     model = servicio.imagenUrl,
                     contentDescription = servicio.nombre,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(
+                            RoundedCornerShape(
+                                topStart = 80.dp,
+                                bottomStart = 80.dp,
+                                topEnd = 0.dp,
+                                bottomEnd = 0.dp
+                            )
+                        ),
                     contentScale = ContentScale.Crop
                 )
+
+                // Botón “Obtener oferta” encima de la imagen
                 Surface(
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
                         .padding(end = 16.dp, bottom = 12.dp),
                     shape = RoundedCornerShape(24.dp),
                     tonalElevation = 4.dp,
                     color = Color.White
                 ) {
                     Row(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
