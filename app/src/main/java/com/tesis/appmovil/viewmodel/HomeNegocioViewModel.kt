@@ -23,11 +23,7 @@ class HomeNegocioViewModel(
     private val _state = MutableStateFlow(HomeNegocioState())
     val state: StateFlow<HomeNegocioState> = _state.asStateFlow()
 
-    // flujo de texto para debounce
     private val queryFlow = MutableStateFlow("")
-    private var firstLoadDone = false
-
-    // >>> NUEVO: cancelamos la petición anterior para que la última gane
     private var currentJob: Job? = null
 
     init {
@@ -39,34 +35,34 @@ class HomeNegocioViewModel(
                     buscarRemoto(q)
                 }
         }
+
+        // ✅ carga inicial apenas se crea el ViewModel
+        cargarDestacados()
     }
 
-    /** Primera carga / destacados */
+    /** Carga negocios destacados (solo auditoría = 1) */
     fun cargarDestacados(limit: Int = 10) {
-        if (_state.value.isLoading) { /* opcional: puedes dejarlo */ }
-        currentJob?.cancel()
-        currentJob = viewModelScope.launch {
+        // ❌ No canceles nada aquí (importante para evitar auto-cancelación)
+        viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            runCatching { repo.listar(page = 1, pageSize = limit, activos = null) }
-                .onSuccess { lista ->
-                    firstLoadDone = true
-                    _state.update { it.copy(isLoading = false, negocios = lista) }
+            runCatching {
+                repo.listar(page = 1, pageSize = limit, activos = null)
+                    .filter { it.estado_auditoria == 1 } // ✅ Solo negocios activos
+            }.onSuccess { lista ->
+                _state.update { it.copy(isLoading = false, negocios = lista) }
+            }.onFailure { e ->
+                if (e !is CancellationException) {
+                    _state.update { it.copy(isLoading = false, error = e.message) }
                 }
-                .onFailure { e ->
-                    if (e !is CancellationException) {
-                        _state.update { it.copy(isLoading = false, error = e.message) }
-                    }
-                }
+            }
         }
     }
 
-    /** El usuario escribe en la barra */
     fun onQueryChange(newValue: String) {
         _state.update { it.copy(query = newValue) }
         queryFlow.value = newValue
     }
 
-    /** Fuerza búsqueda inmediata (enter o icono search) */
     fun buscarAhora() {
         buscarRemoto(_state.value.query)
     }
@@ -76,7 +72,6 @@ class HomeNegocioViewModel(
         currentJob = viewModelScope.launch {
             val query = q.trim()
 
-            // >>> CAMBIO: si está vacío, SIEMPRE recargamos destacados
             if (query.isBlank()) {
                 cargarDestacados(limit = 10)
                 return@launch
@@ -91,16 +86,14 @@ class HomeNegocioViewModel(
                     activos = null,
                     page = 1,
                     pageSize = 20
-                )
+                ).filter { it.estado_auditoria == 1 } // ✅ filtro activo
+            }.onSuccess { lista ->
+                _state.update { it.copy(isLoading = false, negocios = lista) }
+            }.onFailure { e ->
+                if (e !is CancellationException) {
+                    _state.update { it.copy(isLoading = false, error = e.message) }
+                }
             }
-                .onSuccess { lista ->
-                    _state.update { it.copy(isLoading = false, negocios = lista) }
-                }
-                .onFailure { e ->
-                    if (e !is CancellationException) {
-                        _state.update { it.copy(isLoading = false, error = e.message) }
-                    }
-                }
         }
     }
 }

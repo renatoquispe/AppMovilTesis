@@ -16,6 +16,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -513,27 +514,34 @@ private fun ResultsStep(
                 items(results) { s ->
                     Surface(
                         shape = RoundedCornerShape(22.dp),
-                        color = Color.White.copy(alpha = 0.85f)
+                        color = if (isSystemInDarkTheme()) Color(0xFF2B2B2B) else Color.White
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            Text(s.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                            val textColor = if (isSystemInDarkTheme()) Color.White else Color.Black
+
+                            Text(
+                                s.nombre,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = textColor
+                            )
                             Spacer(Modifier.height(6.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Outlined.Money, null, tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(6.dp))
-                                Text("Precio: S/ ${"%.2f".format(s.precio)}")
+                                Text("Precio: S/ ${"%.2f".format(s.precio)}", color = textColor)
                             }
                             Spacer(Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Outlined.Storefront, null, tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(6.dp))
-                                Text("Negocio: ${s.negocioNombre ?: "—"}")
+                                Text("Negocio: ${s.negocioNombre ?: "—"}", color = textColor)
                             }
                             Spacer(Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Outlined.LocationOn, null, tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(6.dp))
-                                Text("Dirección: ${s.direccion ?: "—"}")
+                                Text("Dirección: ${s.direccion ?: "—"}", color = textColor)
                             }
 
                             Spacer(Modifier.height(12.dp))
@@ -544,27 +552,28 @@ private fun ResultsStep(
                                 ) {
                                     Icon(Icons.Outlined.Storefront, null)
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Ver negocio")
+                                    Text("Ver negocio", color = textColor)
                                 }
                                 OutlinedButton(
-                                    onClick = { openMaps(context, s.direccion, s.negocioNombre) }, // 👈 uso el val context
+                                    onClick = { openMaps(context, s.direccion, s.negocioNombre) },
                                     shape = RoundedCornerShape(14.dp)
                                 ) {
                                     Icon(Icons.Outlined.Map, null)
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Cómo llegar")
+                                    Text("Cómo llegar", color = textColor)
                                 }
                                 OutlinedButton(
-                                    onClick = { shareResult(context, s) }, // 👈 uso el val context
+                                    onClick = { shareResult(context, s) },
                                     shape = RoundedCornerShape(14.dp)
                                 ) {
                                     Icon(Icons.Outlined.Share, null)
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Compartir")
+                                    Text("Compartir", color = textColor)
                                 }
                             }
                         }
                     }
+
                 }
             }
         }
@@ -639,12 +648,17 @@ private fun BotBubble(icon: @Composable () -> Unit, text: String) {
         Spacer(Modifier.width(8.dp))
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White.copy(alpha = 0.9f)
+            color = MaterialTheme.colorScheme.surfaceVariant
         ) {
-            Text(text = text, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+            Text(
+                text = text,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+            )
         }
     }
 }
+
 
 @Composable
 private fun AssistantHint(text: String) {

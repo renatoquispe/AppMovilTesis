@@ -64,6 +64,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
+import kotlin.math.*   // 🔧 NUEVO: funciones matemáticas para calculo de Haversine
+
+
 @Composable
 fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
     val state by vm.ui.collectAsState()
@@ -74,6 +77,8 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
     var locationLabel by remember { mutableStateOf("Lima, Perú") }
     // Controla la animación de refresco del chip
     var locRefreshing by remember { mutableStateOf(false) }
+    // 🔧 NUEVO: lista de servicios filtrados por cercanía
+    var serviciosCercanos by remember { mutableStateOf<List<Servicio>>(emptyList()) }
 
     // Pide permiso y, si lo obtiene, resuelve distrito/ciudad
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -86,6 +91,8 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
                     val coords = getCurrentOrLastLocation(context)
                     if (coords != null) {
                         locationLabel = reverseGeocodeName(context, coords.first, coords.second)
+                        // 🔧 actualizar servicios cercanos cuando obtenemos la ubicación
+                        serviciosCercanos = filtrarServiciosCercanos(coords.first, coords.second, state.servicios)
                     }
                 } finally {
                     locRefreshing = false
@@ -97,11 +104,21 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
         }
     }
 
+
     // Pide servicios y ubicación al entrar
     LaunchedEffect(Unit) {
         vm.cargarServicios()
         permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
+
+    // 🔧 NUEVO: recalcular servicios cercanos si cambian los datos de servicios
+    LaunchedEffect(state.servicios) {
+        val coords = getCurrentOrLastLocation(context)
+        if (coords != null) {
+            serviciosCercanos = filtrarServiciosCercanos(coords.first, coords.second, state.servicios)
+        }
+    }
+
 
     Scaffold(
         floatingActionButton = {
@@ -221,46 +238,84 @@ fun HomeScreen(vm: ServicioViewModel, navController: NavController? = null) {
 
                     item { SectionTitle("Servicios cerca de ti") }
                     item {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(state.servicios.take(4), key = { it.idServicio }) { servicio ->
-                                FeaturedCard(
-                                    servicio = servicio,
-                                    onClick = {
+                        if (serviciosCercanos.isNotEmpty()) {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(serviciosCercanos.take(4), key = { it.idServicio }) { servicio ->
+                                    FeaturedCard(servicio = servicio) {
                                         val idDestino = (servicio.idNegocio.takeIf { id -> id > 0 }
                                             ?: servicio.negocio.idNegocio)
                                         if (idDestino > 0) {
                                             navController?.navigate("businessDetail/$idDestino")
                                         }
                                     }
-                                )
+                                }
                             }
+                        } else {
+                            Text(
+                                "No hay servicios cercanos disponibles en este momento",
+                                modifier = Modifier.padding(12.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
+
 
                     item { SectionTitle("Negocios destacados en tu zona") }
                     item {
-                        val negociosUnicos = state.servicios
-                            .groupBy { it.idNegocio.takeIf { id -> id > 0 } ?: it.negocio.idNegocio }
-                            .map { (_, lista) -> lista.first() }
+                        var negociosDestacados by remember { mutableStateOf<List<Servicio>>(emptyList()) }
 
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(
-                                negociosUnicos.take(3),
-                                key = { it.idNegocio.takeIf { id -> id > 0 } ?: it.negocio.idNegocio }
-                            ) { servicio ->
-                                DealRowCard(
-                                    servicio = servicio,
-                                    onClick = {
+                        // Calcula negocios destacados dentro de 10 km
+                        LaunchedEffect(state.servicios, locationLabel) {
+                            val coords = getCurrentOrLastLocation(context)
+                            if (coords != null) {
+                                val (latUser, lonUser) = coords
+
+                                // 🔹 Filtra solo los servicios cuyos negocios estén dentro de 10 km
+                                val serviciosCercanos = state.servicios.filter { s ->
+                                    val lat = s.negocio.latitud?.toDoubleOrNull() ?: return@filter false
+                                    val lon = s.negocio.longitud?.toDoubleOrNull() ?: return@filter false
+                                    distanciaKm(latUser, lonUser, lat, lon) <= 10.0
+                                }
+
+                                // 🔹 Agrupa por negocio y cuenta los servicios de cada uno
+                                val negociosPorCantidad = serviciosCercanos
+                                    .groupBy { it.negocio.idNegocio }
+                                    .mapValues { (_, listaServicios) -> listaServicios.size }
+
+                                // 🔹 Ordena por cantidad de servicios (de mayor a menor)
+                                val negociosDestacadosIds = negociosPorCantidad
+                                    .toList()
+                                    .sortedByDescending { it.second }
+                                    .map { it.first }
+
+                                // 🔹 Toma un servicio representativo por negocio
+                                negociosDestacados = negociosDestacadosIds.mapNotNull { id ->
+                                    serviciosCercanos.find { it.negocio.idNegocio == id }
+                                }.take(3)
+                            }
+                        }
+
+                        if (negociosDestacados.isNotEmpty()) {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(negociosDestacados, key = { it.idServicio }) { servicio ->
+                                    DealRowCard(servicio = servicio) {
                                         val idDestino = (servicio.idNegocio.takeIf { id -> id > 0 }
                                             ?: servicio.negocio.idNegocio)
                                         if (idDestino > 0) {
                                             navController?.navigate("businessDetail/$idDestino")
                                         }
                                     }
-                                )
+                                }
                             }
+                        } else {
+                            Text(
+                                "No hay negocios destacados en tu zona",
+                                modifier = Modifier.padding(12.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
+
 
                     item { Spacer(Modifier.height(24.dp)) }
                 }
@@ -691,3 +746,30 @@ suspend fun reverseGeocodeName(
         }
     }.getOrDefault("Ubicación actual")
 }
+
+// 🔧 NUEVO: calcular distancia y filtrar
+fun distanciaKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    val R = 6371.0
+    val dLat = Math.toRadians(lat2 - lat1)
+    val dLon = Math.toRadians(lon2 - lon1)
+    val a = sin(dLat / 2).pow(2) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return R * c
+}
+
+
+fun filtrarServiciosCercanos(
+    latUser: Double,
+    lonUser: Double,
+    servicios: List<Servicio>,
+    rangoKm: Double = 5.0
+): List<Servicio> {
+    return servicios.filter { s ->
+        // convertir strings a Double de forma segura
+        val lat = s.negocio.latitud?.toDoubleOrNull() ?: return@filter false
+        val lon = s.negocio.longitud?.toDoubleOrNull() ?: return@filter false
+
+        distanciaKm(latUser, lonUser, lat, lon) <= rangoKm
+    }
+}
+
