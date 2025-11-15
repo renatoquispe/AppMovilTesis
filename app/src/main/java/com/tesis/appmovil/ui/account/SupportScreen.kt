@@ -1,5 +1,7 @@
 package com.tesis.appmovil.ui.account
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -173,11 +176,23 @@ fun SupportScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+            val context = LocalContext.current
 
             // Botón enviar
             Button(
                 onClick = {
-                    // Lógica para enviar el mensaje
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "message/rfc822"
+                        putExtra(Intent.EXTRA_EMAIL, arrayOf("soporte@belora.com"))
+                        putExtra(Intent.EXTRA_SUBJECT, selectedSubject)
+                        putExtra(Intent.EXTRA_TEXT, message)
+                    }
+
+                    try {
+                        context.startActivity(Intent.createChooser(intent, "Enviar correo"))
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "No tienes apps de correo instaladas", Toast.LENGTH_SHORT).show()
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()

@@ -52,27 +52,44 @@ fun FAQScreen(
             val faqItems = remember {
                 listOf(
                     FAQItem(
-                        question = "¿Cómo encuentro servicios cerca de mí?",
-                        answer = "Para encontrar servicios cerca de tu ubicación, ve a la sección 'Buscar' en la barra de navegación inferior. La aplicación usará tu ubicación actual para mostrarte los servicios disponibles en tu zona."
+                        question = "¿Cómo puedo editar la información de mi negocio?",
+                        answer = "Ve a la sección 'Negocio'. Desde ahí podrás actualizar el nombre, telefono de contacto, descripción, dirección, imágenes y los horarios de atención."
                     ),
                     FAQItem(
-                        question = "¿Puedo buscar un servicio en otra zona o ciudad?",
-                        answer = "Sí, puedes buscar servicios en cualquier zona o ciudad. En la pantalla de búsqueda, toca el campo de ubicación y escribe la ciudad o área donde deseas buscar servicios."
+                        question = "¿Cómo agrego un nuevo servicio a mi negocio?",
+                        answer = "En la sección 'Servicios', presiona 'Agregar servicio'. Completa el nombre, precio, duración. También puedes subir una imagen opcional."
                     ),
                     FAQItem(
-                        question = "¿Qué tipo de servicios puedo encontrar en la app?",
-                        answer = "Encontrarás una variedad de servicios profesionales de cuidado personal y mucho más."
+                        question = "¿Cómo puedo agregar un descuento u oferta a un servicio?",
+                        answer = "Cuando creas o editas un servicio, encontrarás la opción 'Agregar descuento'. Actívala e ingresa el porcentaje de descuento que deseas aplicar."
                     ),
                     FAQItem(
-                        question = "¿Cómo veo las promociones u ofertas disponibles?",
-                        answer = "Las promociones y ofertas aparecen en la pantalla de inicio."
+                        question = "¿Puedo editar o eliminar un servicio que ya creé?",
+                        answer = "Sí. En la lista de servicios, selecciona uno y elige 'Editar' para modificarlo o 'Eliminar' si deseas removerlo definitivamente."
                     ),
                     FAQItem(
-                        question = "¿Cómo sé si la información está actualizada?",
-                        answer = "Nuestra plataforma verifica regularmente la información de los Profesionales. Además, los usuarios pueden calificar y revisar los servicios, lo que ayuda a mantener la información actualizada y confiable."
+                        question = "¿Cómo puedo cambiar mis datos personales?",
+                        answer = "En la sección 'Cuenta', abre 'Mi perfil'. Ahí podrás cambiar tu nombre, correo y fecha de nacimiento. También puedes actualizar tu contraseña."
+                    ),
+                    FAQItem(
+                        question = "¿Cómo gestiono los horarios de atención de mi negocio?",
+                        answer = "En 'Negocio', selecciona la opción 'Horarios'. Podrás activar o desactivar días, definir horarios de apertura y cierre, y actualizar tu disponibilidad cuando lo desees."
+                    ),
+                    FAQItem(
+                        question = "¿Qué pasa si un servicio no tiene oferta?",
+                        answer = "Si no agregas un descuento, el servicio se mostrará de forma normal sin ninguna promoción activa."
+                    ),
+                    FAQItem(
+                        question = "¿Puedo cambiar las imágenes del negocio después de crearlo?",
+                        answer = "Sí. En 'Mi negocio', selecciona la imagen que deseas cambiar y modificala."
+                    ),
+                    FAQItem(
+                        question = "¿Mis cambios se actualizan al instante?",
+                        answer = "Sí. Cada vez que edites tu negocio, tus servicios o tu perfil, la información se actualiza inmediatamente en tu cuenta."
                     )
                 )
             }
+
 
             // Mostrar cada pregunta con su acordeón
             faqItems.forEachIndexed { index, faqItem ->

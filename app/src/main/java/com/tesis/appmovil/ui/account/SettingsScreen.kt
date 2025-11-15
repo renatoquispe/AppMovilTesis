@@ -52,19 +52,6 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Opción: Modo oscuro
-            SettingsOption(
-                icon = Icons.Outlined.Nightlight,
-                title = "Modo oscuro",
-                showSwitch = true,
-                isSwitchChecked = isDarkModeEnabled,
-                onSwitchChange = { checked ->
-                    isDarkModeEnabled = checked
-                    onToggleDarkMode(checked)
-                }
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             // Opción: Cambiar contraseña
             SettingsOption(
