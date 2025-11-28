@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -38,11 +39,11 @@ fun AccountScreen(
     onLogoutClick: (() -> Unit)? = null
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
-
+    val context = LocalContext.current
     // Función que realiza el logout y navega a Home (comportamiento por defecto)
     fun performLogoutAndGoHome() {
         try {
-            authVM.logout() // asegúrate que tu AuthViewModel tenga este método (o cámbialo)
+            authVM.logout(context) // asegúrate que tu AuthViewModel tenga este método (o cámbialo)
         } catch (e: Exception) {
             // Opcional: manejar excepción
         }

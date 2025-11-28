@@ -1,5 +1,6 @@
 package com.tesis.appmovil.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tesis.appmovil.data.remote.request.GoogleLoginRequest
@@ -26,7 +27,9 @@ data class AuthUiState(
     val role: UserRole? = null,
     val token: String? = null, //probando esto Susan
     val hasBusiness: Boolean = false,   // 👈 NUEVO
-    val negocioId: Int? = null   // 👈 NUEVO
+    val negocioId: Int? = null,   // 👈 NUEVO
+    val expiry: Long? = null  // <-- NUEVO
+
 
 
 )
@@ -131,7 +134,7 @@ class AuthViewModel : ViewModel() {
     /** Login tradicional */
     // En tu AuthViewModel, modifica la función login() para verificar si tiene negocio
 
-    fun login() {
+    fun login(context: Context) {
         val state = _uiState.value
         if (state.email.isBlank() || state.password.isBlank()) {
             _uiState.value = state.copy(error = "Correo y contraseña requeridos")
@@ -140,34 +143,58 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = state.copy(isLoading = true, error = null)
             try {
-                val response = RetrofitClient.api.login(LoginRequest(state.email, state.password))
-                if (response.isSuccessful && response.body()?.success == true) {
-                    val body = response.body()!!
-                    val userData = body.data!!.usuario
-                    val token = body.data!!.token
-                    // DEBUG CRÍTICO
-                    println("🔍 DEBUG AuthViewModel - UserData completo:")
-                    println("   - idUsuario: ${userData.idUsuario}")
-                    println("   - correo: ${userData.correo}")
-                    println("   - negocioId: ${userData.negocioId}")
-                    println("   - tiene negocio: ${userData.negocioId != null}")
+                val resp = RetrofitClient.api.login(LoginRequest(state.email, state.password))
+                if (resp.isSuccessful && resp.body()?.success == true) {
+                    val usuario = resp.body()!!.data!!.usuario
+                    val token = resp.body()!!.data!!.token
+//                    val expiry = resp.body()!!.data!!.expiry
+                    val expiry = System.currentTimeMillis() + 7*24*60*60*1000 // 7 días en ms
 
-                    // 👇 YA NO LLAMES A usuarioTieneNegocio()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        user = userData.correo,
-                        userId = userData.idUsuario,
+                        user = usuario.correo,
+                        userId = usuario.idUsuario,
                         token = token,
-                        hasBusiness = userData.negocioId != null,
-                        negocioId = userData.negocioId
+                        hasBusiness = usuario.negocioId != null,
+                        negocioId = usuario.negocioId,
+                        expiry = expiry
                     )
 
-                    // Configurar Retrofit con el token
+                    // Guardar token en SharedPreferences si quieres persistir sesión
+                    saveToken(context, token, expiry)
+
+                    // Configurar Retrofit para usar el token
                     RetrofitClient.setTokenProvider { _uiState.value.token }
-                } else {
+                }
+
+//                if (response.isSuccessful && response.body()?.success == true) {
+//                    val body = response.body()!!
+//                    val userData = body.data!!.usuario
+//                    val token = body.data!!.token
+//                    // DEBUG CRÍTICO
+//                    println("🔍 DEBUG AuthViewModel - UserData completo:")
+//                    println("   - idUsuario: ${userData.idUsuario}")
+//                    println("   - correo: ${userData.correo}")
+//                    println("   - negocioId: ${userData.negocioId}")
+//                    println("   - tiene negocio: ${userData.negocioId != null}")
+//
+//                    // 👇 YA NO LLAMES A usuarioTieneNegocio()
+//                    _uiState.value = _uiState.value.copy(
+//                        isLoading = false,
+//                        user = userData.correo,
+//                        userId = userData.idUsuario,
+//                        token = token,
+//                        hasBusiness = userData.negocioId != null,
+//                        negocioId = userData.negocioId
+//                    )
+//
+//                    // Configurar Retrofit con el token
+//                    RetrofitClient.setTokenProvider { _uiState.value.token }
+//                }
+                else {
                     _uiState.value = state.copy(
                         isLoading = false,
-                        error = response.body()?.message ?: "Error al iniciar sesión"
+                        error = resp.body()?.message ?: "Error al iniciar sesión"
                     )
                 }
             } catch (e: Exception) {
@@ -181,6 +208,33 @@ class AuthViewModel : ViewModel() {
 
 
     /** Login con Google */
+//    fun loginWithGoogle(idToken: String) {
+//        val state = _uiState.value
+//        _uiState.value = state.copy(isLoading = true, error = null)
+//        viewModelScope.launch {
+//            try {
+//                val resp = RetrofitClient.api.loginWithGoogle(GoogleLoginRequest(idToken))
+//                if (resp.isSuccessful && resp.body()?.success == true) {
+//                    val usuario = resp.body()!!.data!!.usuario
+//                    _uiState.value = _uiState.value.copy(
+//                        isLoading = false,
+//                        user = usuario.correo,
+//                        userId = usuario.idUsuario
+//                    )
+//                } else {
+//                    _uiState.value = _uiState.value.copy(
+//                        isLoading = false,
+//                        error = resp.body()?.message ?: "No se pudo iniciar sesión con Google"
+//                    )
+//                }
+//            } catch (e: Exception) {
+//                _uiState.value = _uiState.value.copy(
+//                    isLoading = false,
+//                    error = e.message ?: "Error de red en Google Sign-In"
+//                )
+//            }
+//        }
+//    }
     fun loginWithGoogle(idToken: String) {
         val state = _uiState.value
         _uiState.value = state.copy(isLoading = true, error = null)
@@ -208,6 +262,7 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
+
     // En tu AuthViewModel.kt
     fun actualizarNegocioId(negocioId: Int) {
         _uiState.update { currentState ->
@@ -217,17 +272,43 @@ class AuthViewModel : ViewModel() {
             )
         }
     }
-    fun logout() {
-        // Limpia los datos del usuario en el estado
-        _uiState.value = AuthUiState()
-
-        // Si usas Firebase (opcional, si tu login usa Firebase)
-        // FirebaseAuth.getInstance().signOut()
-
-        // Si usas token en Retrofit, puedes limpiarlo también
-        RetrofitClient.setTokenProvider { null }
-
-        println("👋 Sesión cerrada correctamente")
+    fun saveToken(context: Context, token: String, expiry: Long) {
+        val prefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("token", token)
+            .putLong("expiry", expiry)
+            .apply()
     }
+
+    fun loadToken(context: Context) {
+        val prefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+        val token = prefs.getString("token", null)
+        val expiry = prefs.getLong("expiry", 0L)
+
+        if (token != null && System.currentTimeMillis() < expiry) {
+            _uiState.value = _uiState.value.copy(token = token)
+            RetrofitClient.setTokenProvider { token }
+        } else {
+            logout(context)
+        }
+    }
+    fun logout(context: Context) {
+        _uiState.value = AuthUiState()
+        RetrofitClient.setTokenProvider { null }
+        context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+            .edit().clear().apply()
+    }
+//    fun logout() {
+//        // Limpia los datos del usuario en el estado
+//        _uiState.value = AuthUiState()
+//
+//        // Si usas Firebase (opcional, si tu login usa Firebase)
+//        // FirebaseAuth.getInstance().signOut()
+//
+//        // Si usas token en Retrofit, puedes limpiarlo también
+//        RetrofitClient.setTokenProvider { null }
+//
+//        println("👋 Sesión cerrada correctamente")
+//    }
 
 }

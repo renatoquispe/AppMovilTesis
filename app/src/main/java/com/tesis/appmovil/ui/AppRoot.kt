@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -572,6 +573,8 @@ fun MainWithBottomBar() {
                 val usuarioVM: UsuarioViewModel = viewModel()
                 val authState by authViewModel.uiState.collectAsState()
                 val uiState by usuarioVM.uiState.collectAsState()
+                val context = LocalContext.current
+
 
                 // cuando entras a "cuenta", carga el usuario logueado
                 LaunchedEffect(authState.userId) {
@@ -599,7 +602,7 @@ fun MainWithBottomBar() {
                     // Lógica de logout personalizada (la llamas desde AppRoot)
                     onLogoutClick = {
                         // 1) Cierra sesión en tu ViewModel (asegúrate que el método exista y se llame logout())
-                        authViewModel.logout() // si tu método se llama distinto, cámbialo aquí
+                        authViewModel.logout(context) // si tu método se llama distinto, cámbialo aquí
 
                         // 2) Navega a "home" y limpia el back stack para evitar volver atrás
                         innerNav.navigate("home") {

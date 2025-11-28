@@ -38,6 +38,13 @@ fun LoginScreen(
     val activity = context as Activity
 
     // DEBUG
+    // Después de un login exitoso
+    LaunchedEffect(state.token) {
+        state.token?.let { token ->
+            vm.saveToken(context, token, state.expiry ?: (System.currentTimeMillis() + 7*24*60*60*1000))
+        }
+    }
+
 
     LaunchedEffect(state.userId) {
         if (state.userId != null) {
@@ -45,6 +52,10 @@ fun LoginScreen(
         }
     }
 
+    // Al iniciar la pantalla, carga token guardado
+    LaunchedEffect(Unit) {
+        vm.loadToken(context)
+    }
 
     // 1) Configurar GoogleSignInClient (idToken + email)
     val gso = remember {
@@ -189,7 +200,7 @@ fun LoginScreen(
 
         // Botón de inicio de sesión normal
         Button(
-            onClick = { vm.login() },
+            onClick = { vm.login(context) },
             enabled = !state.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
