@@ -75,7 +75,7 @@ fun LoginScreen(
             val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
             val idToken = account.idToken
             if (!idToken.isNullOrBlank()) {
-                vm.loginWithGoogle(idToken)
+                vm.loginWithGoogle(idToken, context)
             } else {
                 Toast.makeText(context, "No se obtuvo idToken de Google", Toast.LENGTH_SHORT).show()
             }
