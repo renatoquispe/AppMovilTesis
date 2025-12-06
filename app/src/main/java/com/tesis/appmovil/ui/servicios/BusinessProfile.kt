@@ -152,43 +152,7 @@ fun BusinessProfileScreen(
                 BusinessProfile(
                     negocio         = negocioModel,
                     headerImageUrl  = headerImageUrl,
-//                    onSave = { updated ->
-//                        scope.launch {
-//                            // Filtra solo imágenes nuevas: sin id_imagen y con ruta local
-//                            val nuevasUris = updated.imagenes
-//                                ?.filter { it.id_imagen <= 0 || it.id_imagen == null }  // solo las que no tienen id real
-//                                ?.mapNotNull { it.url_imagen?.takeIf { uri -> uri.startsWith("content://") } }
-//                                ?: emptyList()
-//
-//                            if (nuevasUris.isNotEmpty()) {
-//                                imagenVm.subirImagenes(
-//                                    context = context,
-//                                    negocioId = negocioId,
-//                                    uris = nuevasUris.map(Uri::parse)
-//                                )
-//                            }
-//
-//                            // Ahora actualiza el negocio en la BD
-//                            vm.actualizarNegocio(
-//                                negocioId,
-//                                NegocioUpdate(
-//                                    idCategoria = updated.id_categoria,
-//                                    idUbicacion = updated.id_ubicacion,
-//                                    nombre = updated.nombre,
-//                                    descripcion = updated.descripcion,
-//                                    direccion = updated.direccion,
-//                                    latitud = updated.latitud,
-//                                    longitud = updated.longitud,
-//                                    telefono = updated.telefono,
-//                                    correoContacto = updated.correo_contacto,
-//                                    estadoAuditoria = null
-//                                )
-//                            )
-//
-//                            vm.obtenerNegocio(negocioId)
-//                        }
-//                        imagenVm.cargarImagenes(negocioId)
-//                    },
+
                     onSave = { updated ->
                         scope.launch {
                             // Filtrar solo las imágenes nuevas
@@ -258,15 +222,25 @@ fun BusinessProfile(
     context: Context
 ) {
     val scope = rememberCoroutineScope()  // ✅ define el scope aquí
-    var nombre by remember { mutableStateOf(TextFieldValue(negocio.nombre)) }
-    var telefono by remember { mutableStateOf(TextFieldValue(negocio.telefono ?: "")) }
-    var correo by remember { mutableStateOf(TextFieldValue(negocio.correo_contacto ?: "")) }
-    var descripcion by remember { mutableStateOf(TextFieldValue(negocio.descripcion ?: "")) }
-    var direccion by remember { mutableStateOf(TextFieldValue(negocio.direccion ?: "")) }
+    var nombre by remember { mutableStateOf(TextFieldValue("")) }
+    var telefono by remember { mutableStateOf(TextFieldValue("")) }
+    var correo by remember { mutableStateOf(TextFieldValue("")) }
+    var descripcion by remember { mutableStateOf(TextFieldValue("")) }
+    var direccion by remember { mutableStateOf(TextFieldValue("")) }
+    val imagenesState = remember { mutableStateOf(emptyList<NegocioImagen>()) }
+
+    LaunchedEffect(negocio) {
+        nombre = TextFieldValue(negocio.nombre)
+        telefono = TextFieldValue(negocio.telefono ?: "")
+        correo = TextFieldValue(negocio.correo_contacto ?: "")
+        descripcion = TextFieldValue(negocio.descripcion ?: "")
+        direccion = TextFieldValue(negocio.direccion ?: "")
+        imagenesState.value = negocio.imagenes ?: emptyList()
+    }
 
 
 // Estado mutable para las imágenes
-    val imagenesState = remember { mutableStateOf(negocio.imagenes ?: emptyList()) }
+    //val imagenesState = remember { mutableStateOf(negocio.imagenes ?: emptyList()) }
     val context = LocalContext.current
 
 // Launcher de selección de imagen
@@ -309,25 +283,6 @@ fun BusinessProfile(
             }
         }
     }
-
-//    val picker = rememberLauncherForActivityResult(GetContent()) { uri: Uri? ->
-//        uri?.let { selectedUri ->
-//            imagenSeleccionadaIndex?.let { index ->
-//                val nuevaImagen = NegocioImagen(
-//                    id_imagen = Random().nextInt(), // temporal si no hay id real
-//                    url_imagen = selectedUri.toString(),
-//                    id_negocio = negocio.id_negocio,
-//                    descripcion = null,
-//                    fecha_subida = Date(),
-//                    estado = 1
-//                )
-//                val nuevaLista = imagenesState.value.toMutableList()
-//                nuevaLista[index] = nuevaImagen
-//                imagenesState.value = nuevaLista
-//            }
-//        }
-//    }
-
 
 
     Scaffold(

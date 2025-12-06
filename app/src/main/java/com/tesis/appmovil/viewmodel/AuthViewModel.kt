@@ -207,34 +207,6 @@ class AuthViewModel : ViewModel() {
     }
 
 
-    /** Login con Google */
-//    fun loginWithGoogle(idToken: String) {
-//        val state = _uiState.value
-//        _uiState.value = state.copy(isLoading = true, error = null)
-//        viewModelScope.launch {
-//            try {
-//                val resp = RetrofitClient.api.loginWithGoogle(GoogleLoginRequest(idToken))
-//                if (resp.isSuccessful && resp.body()?.success == true) {
-//                    val usuario = resp.body()!!.data!!.usuario
-//                    _uiState.value = _uiState.value.copy(
-//                        isLoading = false,
-//                        user = usuario.correo,
-//                        userId = usuario.idUsuario
-//                    )
-//                } else {
-//                    _uiState.value = _uiState.value.copy(
-//                        isLoading = false,
-//                        error = resp.body()?.message ?: "No se pudo iniciar sesión con Google"
-//                    )
-//                }
-//            } catch (e: Exception) {
-//                _uiState.value = _uiState.value.copy(
-//                    isLoading = false,
-//                    error = e.message ?: "Error de red en Google Sign-In"
-//                )
-//            }
-//        }
-//    }
     fun loginWithGoogle(idToken: String) {
         val state = _uiState.value
         _uiState.value = state.copy(isLoading = true, error = null)
