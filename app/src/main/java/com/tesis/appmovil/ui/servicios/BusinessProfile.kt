@@ -49,6 +49,7 @@ import com.tesis.appmovil.models.NegocioImagen
 import com.tesis.appmovil.ui.components.BottomNavBar
 import com.tesis.appmovil.viewmodel.NegocioViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
 
@@ -189,6 +190,7 @@ fun BusinessProfileScreen(
                             )
 
                             // Finalmente refrescar
+                            delay(100) // Pequeño delay para asegurar que la BD se actualizó
                             imagenVm.cargarImagenes(negocioId)
                             vm.obtenerNegocio(negocioId)
                         }
