@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,13 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tesis.appmovil.viewmodel.HomeNegocioViewModel
 import com.tesis.appmovil.viewmodel.ServicioViewModel
 
-// ---- Google Maps Compose ----
+// Maps
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
@@ -32,7 +32,6 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-// -----------------------------
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +43,6 @@ fun BuscarScreen(
     val state by vmNegocios.state.collectAsState()
     val serviciosState by vmServicios.ui.collectAsState()
 
-    // Primera carga (destacados + catálogo de servicios para imágenes)
     LaunchedEffect(Unit) {
         if (!state.isLoading && state.negocios.isEmpty()) {
             vmNegocios.cargarDestacados(limit = 10)
@@ -54,18 +52,6 @@ fun BuscarScreen(
         }
     }
 
-    // Imagen por nombre (tarjetas)
-//    val imageByNombre by remember(serviciosState.servicios) {
-//        mutableStateOf(
-//            serviciosState.servicios
-//                .groupBy { it.negocio.nombre }
-//                .mapValues { (_, lista) ->
-//                    lista.firstNotNullOfOrNull { it.negocio.imagenes?.firstOrNull()?.urlImagen }
-//                        ?: lista.firstNotNullOfOrNull { it.imagenUrl }
-//                        ?: ""
-//                }
-//        )
-//    }
     val imageByNegocio by remember {
         derivedStateOf {
             state.negocios.associate { negocio ->
@@ -74,14 +60,11 @@ fun BuscarScreen(
         }
     }
 
-
-
-    // --------- FILTRO LOCAL (fallback, NO tocar) ----------
+    // FILTRO LOCAL
     val query = remember(state.query) { state.query.trim() }
     val negociosFiltrados = remember(state.negocios, query) {
-        if (query.isBlank()) {
-            state.negocios
-        } else {
+        if (query.isBlank()) state.negocios
+        else {
             val q = query.lowercase()
             state.negocios.filter { n ->
                 n.nombre.lowercase().contains(q) ||
@@ -90,25 +73,35 @@ fun BuscarScreen(
             }
         }
     }
-    // ------------------------------------------------------
 
+    // Google Maps
     val lima = LatLng(-12.0464, -77.0428)
-    val firstWithCoords: LatLng? = remember(negociosFiltrados) {
-        negociosFiltrados
-            .firstOrNull { it.latitud != null && it.longitud != null }
-            ?.let { LatLng(it.latitud!!, it.longitud!!) }
-    }
+    val firstCoords: LatLng? = negociosFiltrados
+        .firstOrNull { it.latitud != null && it.longitud != null }
+        ?.let { LatLng(it.latitud!!, it.longitud!!) }
+
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(firstWithCoords ?: lima, 12f)
+        position = CameraPosition.fromLatLngZoom(firstCoords ?: lima, 12f)
     }
 
-    // ---------- Bottom sheet ----------
-    val sheetScaffoldState = rememberBottomSheetScaffoldState()
+    // ---------- FIX PARA QUE EL SHEET NUNCA SE OCUlTE ----------
+    val sheetState = rememberStandardBottomSheetState(
+        initialValue = SheetValue.PartiallyExpanded,
+        skipHiddenState = true, // 💥 evita el estado HIDDEN
+        confirmValueChange = { newValue ->
+            newValue != SheetValue.Hidden // 💥 PROHIBIDO OCULTARSE
+        }
+    )
+
+    val sheetScaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = sheetState
+    )
+    // -----------------------------------------------------------
 
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val density = LocalDensity.current
     val imeVisible = WindowInsets.ime.getBottom(density) > 0
-    // 40% por defecto, 30% si el teclado está visible
+
     val maxSheetHeight = if (imeVisible) screenHeight * 0.30f else screenHeight * 0.40f
 
     BottomSheetScaffold(
@@ -120,6 +113,7 @@ fun BuscarScreen(
         sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         sheetTonalElevation = 2.dp,
         sheetShadowElevation = 10.dp,
+
         sheetContent = {
             val titulo = if (state.query.isBlank())
                 "Servicios más buscados en tu zona"
@@ -129,13 +123,14 @@ fun BuscarScreen(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(max = maxSheetHeight) // tope 40% (30% con teclado)
+                    .heightIn(max = maxSheetHeight)
                     .navigationBarsPadding()
-                    .imePadding() // se ve bien con el teclado abierto
+                    .imePadding()
             ) {
                 if (state.isLoading) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
+
                 Spacer(Modifier.height(8.dp))
 
                 state.error?.let {
@@ -162,29 +157,30 @@ fun BuscarScreen(
                 } else {
                     MasBuscadosSection(
                         title = titulo,
-                        negocios = negociosFiltrados, // <- filtrados
-//                        imageByNombre = imageByNombre,
-                        imageByNombre = imageByNegocio, // <- aquí cambiamos
+                        negocios = negociosFiltrados,
+                        imageByNombre = imageByNegocio,
                         onClick = { negocio -> onClickNegocio(negocio.id_negocio) }
-
-//                        onClick = { negocio ->
-//                            val idDestino = serviciosState.servicios.firstNotNullOfOrNull { s ->
-//                                if (s.negocio.nombre == negocio.nombre)
-//                                    s.idNegocio.takeIf { it > 0 } ?: s.negocio.idNegocio
-//                                else null
-//                            } ?: 0
-//                            if (idDestino > 0) onClickNegocio(idDestino)
-//                        }
                     )
                 }
             }
         }
     ) { innerPadding ->
-        Box(
+        /*Box(
             Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-        ) {
+        )*/
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(
+                    start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
+                    end = innerPadding.calculateEndPadding(LocalLayoutDirection.current),
+                    top = innerPadding.calculateTopPadding(),
+                    bottom = innerPadding.calculateBottomPadding() - 45.dp // ⬅️ Aumentamos mapa hacia abajo
+                )
+        )
+        {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
@@ -196,11 +192,9 @@ fun BuscarScreen(
                 )
             ) {
                 negociosFiltrados.forEach { n ->
-                    val lat = n.latitud
-                    val lng = n.longitud
-                    if (lat != null && lng != null) {
+                    if (n.latitud != null && n.longitud != null) {
                         Marker(
-                            state = MarkerState(position = LatLng(lat, lng)),
+                            state = MarkerState(position = LatLng(n.latitud!!, n.longitud!!)),
                             title = n.nombre,
                             snippet = n.direccion ?: ""
                         )
@@ -219,23 +213,23 @@ fun BuscarScreen(
         }
     }
 }
+
 @Composable
 fun MarqueeText(
     text: String,
     modifier: Modifier = Modifier,
-    speed: Int = 40 // menor = más rápido
+    speed: Int = 40
 ) {
     val scrollState = rememberScrollState()
     var textWidth by remember { mutableStateOf(0) }
     var containerWidth by remember { mutableStateOf(0) }
 
-    // Movimiento continuo
     LaunchedEffect(textWidth, containerWidth) {
-        if (textWidth > containerWidth && textWidth > 0) {
+        if (textWidth > containerWidth) {
             while (true) {
                 val distance = textWidth - containerWidth
-                scrollState.animateScrollTo(distance, animationSpec = tween(durationMillis = distance * speed))
-                scrollState.animateScrollTo(0, animationSpec = tween(durationMillis = distance * speed))
+                scrollState.animateScrollTo(distance, tween(distance * speed))
+                scrollState.animateScrollTo(0, tween(distance * speed))
             }
         }
     }
@@ -243,19 +237,14 @@ fun MarqueeText(
     Box(
         modifier = modifier
             .horizontalScroll(scrollState, enabled = false)
-            .onGloballyPositioned { coordinates ->
-                containerWidth = coordinates.size.width
-            }
+            .onGloballyPositioned { containerWidth = it.size.width }
     ) {
         Text(
             text = text,
             modifier = Modifier
                 .padding(horizontal = 8.dp)
-                .onGloballyPositioned { coordinates ->
-                    textWidth = coordinates.size.width
-                },
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+                .onGloballyPositioned { textWidth = it.size.width },
+            fontSize = 14.sp
         )
     }
 }
@@ -281,17 +270,12 @@ private fun SearchBarOverlay(
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            //Icon(Icons.Outlined.Menu, contentDescription = null)
-            //Spacer(Modifier.width(8.dp))
             TextField(
                 value = text,
                 onValueChange = onTextChange,
                 modifier = Modifier.weight(1f),
                 placeholder = {
-                    MarqueeText(
-                        text = "Busque por negocio o distrito",
-                        speed = 35
-                    )
+                    MarqueeText("Busque por negocio o distrito", speed = 35)
                 },
                 singleLine = true,
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
@@ -300,8 +284,8 @@ private fun SearchBarOverlay(
                     unfocusedIndicatorColor = MaterialTheme.colorScheme.surface,
                     focusedIndicatorColor = MaterialTheme.colorScheme.surface
                 ),
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { onSearch() })
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions { onSearch() }
             )
 
             IconButton(onClick = onSearch) {
