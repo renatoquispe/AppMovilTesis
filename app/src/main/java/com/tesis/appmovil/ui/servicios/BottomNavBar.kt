@@ -35,21 +35,36 @@ fun BottomNavBar(
                 icon = Icons.Outlined.Home,
                 label = "Servicios",
                 selected = selected == "servicios"
-            ) { navController.navigate("servicios/$negocioId") }
+            ) {
+                navController.navigate("servicios/$negocioId") {
+                    launchSingleTop = true
+                    restoreState = true
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                }
+            }
 
             PillItem(
                 icon = Icons.Outlined.Store,
                 label = "Negocio",
                 selected = selected == "negocio"
-            ) { navController.navigate("businessProfile/$negocioId") }
+            ) {
+                navController.navigate("businessProfile/$negocioId") {
+                    launchSingleTop = true
+                    restoreState = true
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                }
+            }
 
             PillItem(
                 icon = Icons.Filled.Person,
                 label = "Cuenta",
                 selected = selected == "cuenta"
             ) {
-                navController.navigate("cuenta"){
+                navController.navigate("cuenta") {
+                    // 🔥 ESTA ES LA CLAVE PARA QUE NO SE ROMPA
                     launchSingleTop = true
+                    restoreState = true
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
                 }
             }
         }
