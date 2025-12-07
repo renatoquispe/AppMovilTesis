@@ -48,10 +48,8 @@ fun BottomNavBar(
                 label = "Cuenta",
                 selected = selected == "cuenta"
             ) {
-                navController.navigate("cuenta") {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                navController.navigate("cuenta"){
                     launchSingleTop = true
-                    restoreState = true
                 }
             }
         }
